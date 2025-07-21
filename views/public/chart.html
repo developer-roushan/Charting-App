@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TrunKey Chart</title>
+    <link rel="stylesheet" href="/css/chart.css" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="navbar-group">
+        <button class="nav-btn" onclick="openChangePasswordModal();" disabled>
+          Settings
+        </button>
+        <button class="nav-btn">Realtime</button>
+        <button class="nav-btn">Renko settings</button>
+        <button
+          class="nav-btn"
+          id="generateChartBtn"
+          onclick="validateChartForm();"
+        >
+          Generate chart
+        </button>
+        <button class="nav-btn">Delete history</button>
+        <button onclick="Logout()" class="nav-btn nav-btn-logout">
+          Exit & Delete history
+        </button>
+      </div>
+    </header>
+
+    <div class="dashboard-main">
+      <div class="chart-controls-bar">
+        <div class="chart-controls">
+          <label>
+            Ticker:
+            <div class="ticker-autocomplete">
+              <input
+                type="text"
+                id="ticker"
+                placeholder="Enter Ticker(s)"
+                autocomplete="off"
+              />
+              <input type="hidden" id="ticker-code" />
+              <ul id="ticker-list" class="ticker-list"></ul>
+              <span class="input-error" id="error-ticker"></span>
+            </div>
+          </label>
+          <label>
+            Date & Time From:
+            <input
+              type="datetime-local"
+              id="dateFrom"
+              oninput="updateInterval();"
+            />
+            <span class="input-error" id="error-dateFrom"></span>
+          </label>
+          <label>
+            Date & Time To:
+            <input
+              type="datetime-local"
+              id="dateTo"
+              oninput="updateInterval();"
+            />
+            <span class="input-error" id="error-dateTo"></span>
+          </label>
+          <label>
+            Interval:
+            <select id="interval">
+              <option value="1m">1min</option>
+              <option value="15m">15min</option>
+              <option value="30m">30min</option>
+              <option value="1h">60min</option>
+              <option value="static">Static</option>
+            </select>
+            <span class="input-error" id="error-interval"></span>
+          </label>
+          <label>
+            Chart type:
+            <select id="chartType">
+              <option value="area">Area Chart</option>
+              <option value="line">Line Chart</option>
+              <option value="candlestick">Candlestick</option>
+              <option value="baseline">Baseline</option>
+              <option value="heikin">Heikin Ashi</option>
+              <option value="renko">Renko</option>
+            </select>
+            <span class="input-error" id="error-chartType"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="dashboard-top">
+        <div class="chart-area card">
+          <div class="chart-toolbar">
+            <div class="toolbar-left" id="toolbarLeft">
+              <label
+                ><input type="checkbox" id="chk1" /> <span>Value 1</span></label
+              >
+              <label
+                ><input type="checkbox" id="chk2" /> <span>Value 2</span></label
+              >
+            </div>
+            <button
+              id="expandChartBtn"
+              class="expand-btn"
+              title="Expand/Shrink"
+            >
+              <span id="expandIcon" class="material-icons">fullscreen</span>
+            </button>
+          </div>
+
+          <div id="chartDiv"></div>
+        </div>
+        <aside class="side-panel card">
+          <div class="side-custom-grid">
+            <div class="grid-row row1">
+              <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row row2">
+              <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row row3">
+              <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row row4">
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row row5">
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+            </div>
+            <div class="grid-row row6">
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+              <div class="grid-cell"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="news-controls-bar">
+        <form class="news-controls-form">
+          <div class="control-group">
+            <label for="newsStartDate"><strong>Start Date:</strong></label>
+            <input type="date" id="newsStartDate" />
+          </div>
+          <div class="control-group">
+            <label for="newsEndDate"><strong>End Date:</strong></label>
+            <input type="date" id="newsEndDate" />
+          </div>
+          <div class="control-group" style="align-self: flex-end">
+            <button
+              type="button"
+              id="generateNewsBtn"
+              class="news-generate-btn"
+            >
+              Generate
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="news-table card" id="newsCard">
+        <table>
+          <colgroup>
+            <col style="width: 20%" />
+            <col style="width: 20%" />
+            <col style="width: 60%" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Date of Publication</th>
+              <th>News Outlet</th>
+              <th class="headlines-header">
+                Headlines & Info
+                <button
+                  id="expandNewsBtn"
+                  class="expand-btn news-expand-btn"
+                  title="Expand/Shrink News"
+                >
+                  <span id="newsExpandIcon" class="material-icons"
+                    >fullscreen</span
+                  >
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2025-07-09</td>
+              <td>Example News</td>
+              <td>Sample news headline here</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal-overlay" style="display: none">
+      <div class="modal-dialog">
+        <form
+          id="changePasswordForm"
+          class="modal-form"
+          autocomplete="off"
+          onsubmit="return submitChangePassword();"
+        >
+          <h2>Change Password</h2>
+          <label>
+            Old Password:
+            <input type="password" id="oldPassword" />
+            <span class="input-error" id="error-oldPassword"></span>
+          </label>
+          <label>
+            New Password:
+            <input type="password" id="newPassword" />
+            <span class="input-error" id="error-newPassword"></span>
+          </label>
+          <label>
+            Confirm Password:
+            <input type="password" id="confirmPassword" />
+            <span class="input-error" id="error-confirmPassword"></span>
+          </label>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="modal-btn cancel-btn"
+              onclick="closeChangePasswordModal()"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="modal-btn submit-btn">Change</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/js/chart.js"></script>
+  </body>
+</html>
