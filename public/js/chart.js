@@ -1,7 +1,7 @@
 let ohlcData = [];
 let earliestDateLoaded = null;
 let isLoadingMore = false;
-let chart, chartContainer, candlestickSeries, series, volumeSeries;
+let chart, chartContainer, series, volumeSeries;
 let baseUrl = '/api/chart/';
 
 
@@ -154,6 +154,10 @@ function chartExpandSrink() {
     });
 }
 
+/**
+ * Fetches, filters, and renders the chart data based on user selections.
+ * Implements special filtering for 'static' interval mode.
+ */
 async function fetchAndRenderChartData(options = {}) {
   const {
     symbol,
@@ -165,98 +169,98 @@ async function fetchAndRenderChartData(options = {}) {
   const isStatic = interval === 'static';
 
   // 1) Parse & adjust dates
+  // For static mode, force the time to the beginning and end of the day
   let startDate = new Date(fromStr);
-  let endDate   = new Date(toStr);
   if (isStatic) {
-    startDate.setHours(0,   0,  0,   0);
+    startDate.setHours(0, 0, 0, 0);
+  }
+  let endDate = new Date(toStr);
+  if (isStatic) {
     endDate.setHours(23, 59, 59, 999);
   }
 
-  // 2) Build URL
+  // 2) Build URL for fetching data from the server
   const url = new URL('ohlc', window.location.origin + baseUrl);
   url.searchParams.set('symbol', symbol);
-  url.searchParams.set('from',   startDate.toISOString());
-  url.searchParams.set('to',     endDate.toISOString());
-  if (!isStatic) {
-    url.searchParams.set('interval', interval);
-  }
-
-  // 3) Fetch & normalize
-  let ohlcData = [];
+  url.searchParams.set('from', startDate.toISOString());
+  url.searchParams.set('to', endDate.toISOString());
+  
+  // 3) Fetch & normalize raw data
+  let rawOhlcData = [];
   try {
     const resp = await fetch(url.toString());
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
     const payload = await resp.json();
-    const rows = Array.isArray(payload) ? payload : payload.data || [];
-    ohlcData = rows
-      .map(d => {
-        const ts = Date.parse(d.datetime);
-        return {
-          time:   Math.floor(ts / 1000),
-          open:   parseFloat(d.open),
-          high:   parseFloat(d.high),
-          low:    parseFloat(d.low),
-          close:  parseFloat(d.close),
-          volume: parseInt(d.volume, 10),
-        };
-      })
-      .filter(d =>
-        !isNaN(d.time) &&
-        !isNaN(d.open) &&
-        !isNaN(d.high) &&
-        !isNaN(d.low) &&
-        !isNaN(d.close) &&
-        !isNaN(d.volume)
-      )
+    if (payload.success === false) throw new Error(payload.message || 'Server returned an error');
+    
+    const rows = Array.isArray(payload) ? payload : (payload.data || []);
+    rawOhlcData = rows.map(d => ({
+        time: Math.floor(Date.parse(d.datetime) / 1000),
+        open: parseFloat(d.open),
+        high: parseFloat(d.high),
+        low: parseFloat(d.low),
+        close: parseFloat(d.close),
+        volume: parseInt(d.volume, 10),
+      }))
+      .filter(d => !Object.values(d).some(isNaN))
       .sort((a, b) => a.time - b.time);
+
   } catch (e) {
-    console.error('Failed to load OHLC:', e);
+    console.error('Failed to load or parse OHLC data:', e);
+    // Display an error to the user in the chart container
+    chartContainer.innerHTML = `<div class="chart-error">Could not load chart data: ${e.message}</div>`;
     return;
   }
 
-  // 4) Static‐interval sampling
-  let finalData = ohlcData;
-  if (isStatic) {
+  // 4) If static mode, perform advanced filtering
+  let finalData = rawOhlcData;
+  if (isStatic && rawOhlcData.length > 0) {
     const msPerDay = 24 * 60 * 60 * 1000;
     const spanDays = (endDate - startDate) / msPerDay;
-    const slots    = getStaticSlots(spanDays);
-    const allowed  = new Set();
+    const slots = getStaticSlots(spanDays);
+    const allowedTimestamps = new Set();
 
-    for (let d = new Date(startDate); d <= endDate; d = new Date(d.getTime() + msPerDay)) {
-      const wd = d.getDay();
-      // only Mon–Fri
-      if (wd < 1 || wd > 5) continue;
-      // for 365–1825 days, only Mondays (1) & Fridays (5)
-      if (spanDays > 365 && spanDays <= 1825 && wd !== 1 && wd !== 5) continue;
+    // Iterate through each day in the range to build a set of valid timestamps
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay(); // Sunday = 0, Monday = 1, etc.
+      
+      // Rule: Skip non-trading days (Saturday and Sunday)
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
+      // Rule: For >365 day spans, only include Mondays (1) and Fridays (5)
+      if (spanDays > 365 && dayOfWeek !== 1 && dayOfWeek !== 5) continue;
+      
+      // For each valid day, add the allowed time slots to our set
       slots.forEach(({ h, m }) => {
         const dt = new Date(d);
         dt.setHours(h, m, 0, 0);
-        allowed.add(Math.floor(dt.getTime() / 1000));
+        allowedTimestamps.add(Math.floor(dt.getTime() / 1000));
       });
     }
-
-    finalData = ohlcData.filter(d => allowed.has(d.time));
+    
+    // Filter the fetched data to keep only points that match an allowed timestamp
+    finalData = rawOhlcData.filter(d => allowedTimestamps.has(d.time));
   }
+  
+  // Update the global ohlcData variable
+  ohlcData = finalData;
 
-  switchChartType(chartType);
-
-  if (ohlcData.length > 0) {
-    if (series) series.setData(finalData);
-
-    // if (volumeSeries) {
-    //   const volumeData = ohlcData.map((d) => ({
-    //     time: d.time,
-    //     value: d.volume || 0,
-    //     color: d.close > d.open ? "#26a69a" : "#ef5350",
-    //   }));
-    //   volumeSeries.setData(volumeData);
-    // }
-    applyAxisConfig(finalData);    
+  // 5) Render the chart with the final, filtered data
+  switchChartType(chartType, finalData);
+  
+  if (finalData.length > 0) {
+    applyAxisConfig(finalData);
     chart.timeScale().fitContent();
-    earliestDateLoaded = finalData[0].time;
+    earliestDateLoaded = finalData[0]?.time;
+  } else {
+    // If no data remains after filtering, clear the chart and show a message
+    if(series) chart.removeSeries(series);
+    chartContainer.innerHTML = '<div class="chart-error">No data available for the selected static intervals.</div>';
+    // Re-initialize a blank chart container for future use
+    setTimeout(() => setupChart(), 100);
   }
 }
+
 
 // Helpers
 
@@ -265,88 +269,79 @@ function isTradingDay(d) {
   return wd >= 1 && wd <= 5;
 }
 
+/**
+ * Returns an array of time slots based on the date range span.
+ * Each slot is an object {h: hour, m: minute}.
+ * @param {number} spanDays The total number of days in the selected date range.
+ * @returns {Array<Object>} An array of time slot objects.
+ */
 function getStaticSlots(spanDays) {
   if (spanDays <= 5) {
     return [
       {h:4, m:0}, {h:5, m:0}, {h:6, m:0}, {h:7, m:0},
-      {h:8, m:0}, {h:9, m:0}, {h:10, m:0},{h:12, m:0},
-      {h:14, m:0},{h:16, m:0},{h:16, m:30},{h:17, m:0},
+      {h:8, m:0}, {h:9, m:0}, {h:10, m:0}, {h:12, m:0},
+      {h:14, m:0}, {h:16, m:0}, {h:16, m:30}, {h:17, m:0},
       {h:19, m:0},
     ];
   } else if (spanDays <= 15) {
     return [
-      {h:4, m:0}, {h:7, m:0}, {h:8, m:30},{h:9, m:30},
-      {h:11, m:0},{h:13, m:30},{h:16, m:30},{h:17, m:30},
+      {h:4, m:0}, {h:7, m:0}, {h:8, m:30}, {h:9, m:30},
+      {h:11, m:0}, {h:13, m:30}, {h:16, m:30}, {h:17, m:30},
       {h:19, m:0},
     ];
   } else if (spanDays <= 60) {
     return [
-      {h:4,  m:0}, {h:9,  m:30}, {h:12, m:0},
-      {h:16, m:30},{h:19, m:0},
+      {h:4, m:0}, {h:9, m:30}, {h:12, m:0}, {h:16, m:30}, {h:19, m:0},
     ];
   } else if (spanDays <= 120) {
     return [
-      {h:4,  m:0}, {h:9,  m:30},
-      {h:16, m:30},{h:19, m:0},
+      {h:4, m:0}, {h:9, m:30}, {h:16, m:30}, {h:19, m:0},
     ];
   } else if (spanDays <= 210) {
-    return [
-      {h:4,  m:0}, {h:19, m:0},
-    ];
+    return [{h:4, m:0}, {h:19, m:0}];
   } else if (spanDays <= 365) {
-    return [
-      {h:19, m:0},
-    ];
+    return [{h:19, m:0}];
   } else {
-    // 365–1825 days: only 7pm slots (Mon & Fri filtered above)
-    return [
-      {h:19, m:0},
-    ];
+    // For ranges > 365 days, the filtering logic will also check for Mon/Fri
+    return [{h:19, m:0}];
   }
 }
 
 
-function switchChartType(type) {
-  // 1) Remove existing series (main + comparisons)
+function switchChartType(type, data) { // CHANGED: Added 'data' parameter
+  // If a series exists, remove it before creating a new one
   if (series) {
     chart.removeSeries(series);
     series = null;
   }
-  // Comparison series might be stored in an array
-  // if (comparisonSeries && comparisonSeries.length) {
-  //   comparisonSeries.forEach(s => chart.removeSeries(s));
-  // }
-  // comparisonSeries = [];
 
-  // // 2) Disable or enable comparison inputs
-  // const compIds = ['ticker2','ticker3'];
-  // const allowComparisons = (type === 'Area' || type === 'Line');
-  // compIds.forEach(id => {
-  //   const inp = document.getElementById(id);
-  //   inp.disabled = !allowComparisons;
-  //   inp.classList.toggle('disabled', !allowComparisons);
-  //   if (!allowComparisons) inp.value = '';
-  // });
+  // If there's no data, don't try to draw anything
+  if (!data || data.length === 0) {
+    return;
+  }
 
-  // 3) Prepare the main data
-  const candleData = ohlcData; 
-  const lineData   = ohlcData.map(d => ({ time: d.time, value: d.close }));
-  console.log('candleData:', type);
-  // 4) Create the right series & set main data
-  switch (type) {
+  // Convert type to lowercase to avoid case-sensitivity issues
+  const lowerCaseType = type.toLowerCase();
+
+  // Prepare data formats for different series types using the passed-in 'data'
+  const candleData = data; // Use the data from the parameter
+  const lineData = data.map(d => ({ time: d.time, value: d.close })); // Use the data from the parameter
+
+  // Create the correct series type and set its data
+  switch (lowerCaseType) {
     case 'area':
       series = chart.addAreaSeries({
-        topColor:   '#7bb5ff88',
-        bottomColor:'#ffffff00',
-        lineColor:  '#2196f3',
-        lineWidth:  2,
+        topColor: '#7bb5ff88',
+        bottomColor: '#ffffff00',
+        lineColor: '#2196f3',
+        lineWidth: 2,
       });
       series.setData(lineData);
       break;
 
     case 'line':
       series = chart.addLineSeries({
-        color:     '#2196f3',
+        color: '#2196f3',
         lineWidth: 2,
       });
       series.setData(lineData);
@@ -354,80 +349,35 @@ function switchChartType(type) {
 
     case 'candlestick':
       series = chart.addCandlestickSeries({
-        upColor:    '#26a69a',
-        downColor:  '#ef5350',
+        upColor: '#26a69a',
+        downColor: '#ef5350',
         borderVisible: false,
-        wickUpColor:   '#26a69a',
+        wickUpColor: '#26a69a',
         wickDownColor: '#ef5350',
       });
       series.setData(candleData);
       break;
 
     case 'baseline':
-      // simple line; you can add right-click baseline toggle here
-      series = chart.addLineSeries({
-        color:     '#26a69a',
-        lineWidth: 2,
+      series = chart.addBaselineSeries({
+        baseValue: { type: 'price', price: data[0]?.close || 0 }, // Use the data from the parameter
+        topLineColor: 'rgba( 38, 166, 154, 1)',
+        topFillColor1: 'rgba( 38, 166, 154, 0.28)',
+        topFillColor2: 'rgba( 38, 166, 154, 0.05)',
+        bottomLineColor: 'rgba( 239, 83, 80, 1)',
+        bottomFillColor1: 'rgba( 239, 83, 80, 0.05)',
+        bottomFillColor2: 'rgba( 239, 83, 80, 0.28)',
       });
       series.setData(lineData);
       break;
 
-    case 'heikin':
-      // treat as candlestick—data must be preprocessed outside this fn
-      series = chart.addCandlestickSeries({
-        upColor:    '#26a69a',
-        downColor:  '#ef5350',
-        borderVisible: false,
-        wickUpColor:   '#26a69a',
-        wickDownColor: '#ef5350',
-      });
-      series.setData(candleData);
-      break;
-
-    case 'renko':
-      // default candlestick style for Renko bricks
-      series = chart.addCandlestickSeries({
-        upColor:    '#26a69a',
-        downColor:  '#ef5350',
-      });
-      series.setData(candleData);
-      break;
-
     default:
-      // fallback to candlestick
-      series = chart.addCandlestickSeries();
-      series.setData(candleData);
+      console.error('Chart type not recognized:', lowerCaseType);
   }
-
-  // 5) If comparisons are allowed, draw ticker2 & ticker3
-  // if (allowComparisons) {
-  //   const palette = ['#2196f3','#7efa7e','#ffa64d']; // T1, T2, T3
-  //   compIds.forEach((id, idx) => {
-  //     const code = document.getElementById(id).value;
-  //     if (!code) return;
-  //     let cmpSeries;
-
-  //     if (type === 'Area') {
-  //       cmpSeries = chart.addAreaSeries({
-  //         topColor:   '#7efa7e44',
-  //         bottomColor:'#ffffff00',
-  //         lineColor:  palette[idx+1],
-  //         lineWidth:  2,
-  //       });
-  //       cmpSeries.setData(lineDataFor(code));  
-  //     }
-  //     else if (type === 'Line') {
-  //       cmpSeries = chart.addLineSeries({
-  //         color:     palette[idx+1],
-  //         lineWidth: 2,
-  //       });
-  //       cmpSeries.setData(lineDataFor(code));
-  //     }
-  //     // store for cleanup
-  //     comparisonSeries.push(cmpSeries);
-  //   });
-  // }
 }
+
+
+
 
 
 
@@ -605,46 +555,58 @@ function autoSelectFirstEnabled(select) {
     }
   }
 }
+/**
+ * Applies dynamic configuration to the chart's axes based on the visible date range.
+ * @param {Array<Object>} data The data currently displayed on the chart.
+ */
 function applyAxisConfig(data) {
   if (!data || data.length < 2) return;
 
-  // 1) Compute span in days
-  const first   = new Date(data[0].time);
-  const last    = new Date(data[data.length - 1].time);
-  const spanMs  = last - first;
+  // 1) Compute the span of the data in days
+  const first = new Date(data[0].time * 1000);
+  const last = new Date(data[data.length - 1].time * 1000);
+  const spanMs = last.getTime() - first.getTime();
   const spanDays = spanMs / (1000 * 60 * 60 * 24);
 
-  // 2) Apply chart options
+  // 2) Apply chart options with the new, more granular time scale formatter
   chart.applyOptions({
     rightPriceScale: {
       autoScale: true,
       scaleMargins: { top: 0.2, bottom: 0.1 }
     },
     timeScale: {
+      // This function determines what text appears on the x-axis labels
       tickMarkFormatter: (unixSeconds, tickType, locale) => {
-        const d     = new Date(unixSeconds * 1000);
-        const day   = d.getDate();
+        const d = new Date(unixSeconds * 1000);
+        const day = d.getDate();
         const month = d.toLocaleString(locale, { month: 'short' });
-        const year  = d.getFullYear();
+        const year = d.getFullYear();
+        const hours = d.getHours();
+        const minutes = d.getMinutes().toString().padStart(2, '0');
 
-        if (spanDays <= 30) {
-          // 1–30 days: label by day
-          return String(day);
+        // --- NEW LOGIC TO MEET YOUR REQUIREMENT ---
+        if (spanDays <= 1) {
+          // For single-day views, just show the time (e.g., "14:30")
+          return `${hours}:${minutes}`;
+        } else if (spanDays <= 15) {
+          // For 2-15 day views, show the day and time (e.g., "16 04:00")
+          return `${day} ${hours}:${minutes}`;
         } else if (spanDays <= 90) {
-          // 31–90 days: day + short month
+          // For 16-90 day views, show the day and month (e.g., "16 Jul")
           return `${day} ${month}`;
         } else if (spanDays <= 365) {
-          // 91–365 days: month only
+          // For 91-365 day views, show just the month
           return month;
         } else if (spanDays <= 1825) {
-          // 366–1825 days: quarter + year
+          // For 1-5 year views, show the quarter and year (e.g., "Q3 2025")
           const q = Math.floor(d.getMonth() / 3) + 1;
           return `Q${q} ${year}`;
         } else {
-          // Beyond 5 years: full year
+          // For views longer than 5 years, show only the year
           return String(year);
         }
       }
     }
   });
 }
+
