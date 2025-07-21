@@ -3,60 +3,36 @@ const axios = require("axios");
 const path = require("path");
 const fs = require('fs').promises;
 
-// --- Configuration ---
 const apiKey = process.env.EODHD_API_KEY;
 const baseUrl = 'https://eodhd.com/api/';
 const tickerFilePath = path.join(__dirname, "../data/ticker.json");
-const cacheDir = path.join(__dirname, '..', 'data', 'cache'); // Directory for cached OHLC data
+const cacheDir = path.join(__dirname, '..', 'data', 'cache');
 
-// --- Helper Function for Caching ---
-/**
- * Generates a consistent, safe filename for caching based on request parameters.
- * @returns {string} The generated, safe filename.
- */
 function generateCacheFilename(symbol, fromISO, toISO, interval) {
-  // Use 'na' for null/undefined date/interval to ensure consistent filenames
   const from = fromISO ? `from_${new Date(fromISO).toISOString().split('T')[0]}` : 'from_na';
   const to = toISO ? `to_${new Date(toISO).toISOString().split('T')[0]}` : 'to_na';
   const int = interval ? `interval_${interval}` : 'interval_na';
-
-  // Sanitize the symbol to remove characters invalid in filenames
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, '_');
-
   return `${safeSymbol}_${from}_${to}_${int}.json`;
 }
 
-
-/**
- * Fetch intraday OHLC data, with file-based caching.
- *
- * @param {string|null} fromISO     ISO datetime e.g. "2025-07-19T08:58"
- * @param {string|null} toISO       ISO datetime e.g. "2025-07-19T13:58"
- * @param {string}      symbol      e.g. "AAPL.US"
- * @param {string}      interval    e.g. "1m","5m","1h"
- */
 exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
-  // 1. Ensure the cache directory exists
   await fs.mkdir(cacheDir, { recursive: true });
 
-  // 2. Generate a unique filename for this specific request
   const filename = generateCacheFilename(symbol, fromISO, toISO, interval);
   const filePath = path.join(cacheDir, filename);
 
-  // 3. Check if the cached file exists (CACHE HIT)
   try {
     const cachedData = await fs.readFile(filePath, 'utf-8');
     console.log(`✅ [CACHE HIT] Serving data from ${filename}`);
     return JSON.parse(cachedData);
   } catch (error) {
-    // If file doesn't exist (ENOENT), it's a cache miss. This is expected.
     if (error.code !== 'ENOENT') {
       console.error(`[CACHE READ ERROR] Could not read cache file ${filename}:`, error);
     }
     console.log(`❌ [CACHE MISS] File not found: ${filename}. Fetching from API.`);
   }
 
-  // 4. If cache miss, fetch from the external API
   const params = new URLSearchParams({
     api_token: apiKey,
     fmt: 'json',
@@ -82,7 +58,6 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     throw err;
   }
 
-  // Sanitize and filter the response data
   const raw = Array.isArray(resp.data) ? resp.data : [];
   const data = raw.filter(d =>
     d.datetime &&
@@ -91,7 +66,6 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     !isNaN(d.volume)
   );
 
-  // 5. If data is valid, save it to the cache for the next request (CACHE WRITE)
   if (data.length > 0) {
     try {
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
@@ -103,8 +77,6 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
 
   return data;
 };
-
-// --- Your Other Existing Functions (Unchanged) ---
 
 exports.fetchAndSaveTicker = async () => {
   let url = `${baseUrl}exchange-symbol-list/us?api_token=${apiKey}&type=common_stock&fmt=json`;
@@ -131,7 +103,6 @@ async function readTickerData() {
   return JSON.parse(raw);
 }
 
-// NOTE: This function is not recommended for production environments as it writes to the .env file.
 exports.changePassword = async (oldPass, newPass) => {
   const envPath = path.resolve('.env');
   const currentPassword = process.env.PASSWORD;
@@ -139,8 +110,7 @@ exports.changePassword = async (oldPass, newPass) => {
   if (oldPass !== currentPassword) {
     return false;
   }
-  
-  // Use async file operations for consistency
+
   try {
     const envContent = await fs.readFile(envPath, 'utf-8');
     let lines = envContent.split('\n');
@@ -157,21 +127,31 @@ exports.changePassword = async (oldPass, newPass) => {
     if (!found) {
       lines.push(`PASSWORD=${newPass}`);
     }
-    
-    // Remove trailing blank lines before writing
+
     while (lines.length > 0 && lines[lines.length - 1].trim() === "") {
       lines.pop();
     }
-    
+
     await fs.writeFile(envPath, lines.join('\n') + '\n', 'utf-8');
     return true;
   } catch (error) {
-    // Check if the file just doesn't exist yet
     if (error.code === 'ENOENT') {
       await fs.writeFile(envPath, `PASSWORD=${newPass}\n`, 'utf-8');
       return true;
     }
     console.error("Error updating .env file:", error);
     return false;
+  }
+};
+
+exports.clearCacheFiles = async () => {
+  try {
+    await fs.rm(cacheDir, { recursive: true, force: true });
+    await fs.mkdir(cacheDir, { recursive: true });
+    console.log('🗑️ Cache directory has been cleared.');
+    return { success: true, message: 'Successfully cleared all cached history.' };
+  } catch (error) {
+    console.error("Error clearing cache directory:", error);
+    throw new Error('Failed to clear cache files due to a server error.');
   }
 };
