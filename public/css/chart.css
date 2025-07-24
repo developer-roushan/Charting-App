@@ -93,6 +93,55 @@ a, a:visited, a:active,a:hover {
   background: #e6f3ff;
 }
 
+.comparison-tickers-container {
+  display: flex;
+  gap: 1.5rem; /* Space between inputs */
+  flex-wrap: wrap; /* Allows wrapping on small screens */
+}
+
+.form-group {
+  flex: 1; /* Each input takes equal space */
+  min-width: 250px; /* Prevents inputs from being too narrow */
+}
+.ticker-autocomplete input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.ticker-list {
+  position: absolute;
+  z-index: 1000;
+  background-color: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ticker-list li {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.ticker-list li:hover {
+  background-color: #f0f0f0;
+}
+/* Add to style.css */
+.form-group label {
+  font-weight: bold;
+  color: #333; /* Dark text for readability */
+}
+
+.ticker-autocomplete input:focus {
+  border-color: #2196f3; /* Blue focus border to match main theme */
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2); /* Subtle glow */
+}
 
 
 .dashboard-main {
@@ -621,6 +670,10 @@ select.input-error-border {
   .modal-form label { font-size: 1.01rem; }
   .modal-actions { flex-direction: column; gap: 8px; }
   .modal-btn { width: 100%; }
+  .comparison-tickers-container {
+    flex-direction: column; /* Stack vertically on small screens */
+    gap: 1rem;
+  }
 }
 .modal-overlay {
   position: fixed;

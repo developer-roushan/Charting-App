@@ -28,7 +28,13 @@
         >
           Generate chart
         </button>
-<button id="deleteHistoryBtn"  onclick="deleteCacheHistory();" class="nav-btn">Delete history</button>
+        <button
+          id="deleteHistoryBtn"
+          onclick="deleteCacheHistory();"
+          class="nav-btn"
+        >
+          Delete history
+        </button>
         <button onclick="Logout()" class="nav-btn nav-btn-logout">
           Exit & Delete history
         </button>
@@ -100,13 +106,43 @@
         <div class="chart-area card">
           <div class="chart-toolbar">
             <div class="toolbar-left" id="toolbarLeft">
-              <label
-                ><input type="checkbox" id="chk1" /> <span>Value 1</span></label
-              >
-              <label
-                ><input type="checkbox" id="chk2" /> <span>Value 2</span></label
-              >
+              <div class="comparison-tickers-container">
+                <!-- Ticker 1 Input -->
+                <div class="form-group">
+                  <label>
+                    Ticker 1:
+                    <div class="ticker-autocomplete">
+                      <input
+                        type="text"
+                        id="compare-ticker-1"
+                        placeholder="Enter Ticker(s)"
+                        autocomplete="off"
+                      />
+                      <input type="hidden" id="compare-ticker-code-1" />
+                      <ul id="compare-ticker-list-1" class="ticker-list"></ul>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Ticker 2 Input -->
+                <div class="form-group">
+                  <label>
+                    Ticker 2:
+                    <div class="ticker-autocomplete">
+                      <input
+                        type="text"
+                        id="compare-ticker-2"
+                        placeholder="Enter Ticker(s)"   
+                        autocomplete="off"
+                      />
+                      <input type="hidden" id="compare-ticker-code-2" />
+                      <ul id="compare-ticker-list-2" class="ticker-list"></ul>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
+
             <button
               id="expandChartBtn"
               class="expand-btn"

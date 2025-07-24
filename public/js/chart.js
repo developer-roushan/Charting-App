@@ -37,66 +37,104 @@ function setupChart() {
     }
   }, { passive: true });
 }
-
 function setupTicker() {
-  const tickerInput = document.getElementById("ticker");
-  const tickerList = document.getElementById("ticker-list");
-  const tickerCodeInput = document.getElementById("ticker-code");
+const chartTypeSelect = document.getElementById('chartType');
+  if (chartTypeSelect) {
+    toggleCompareInputs(chartTypeSelect.value);
+
+    chartTypeSelect.addEventListener('change', (e) => {
+      toggleCompareInputs(e.target.value);
+    });
+
+  } else {
+    console.warn('Chart type dropdown (id="chartType") not found.');
+  } 
+  
+   const inputs = [
+    { inputId: "ticker", listId: "ticker-list", codeId: "ticker-code", defaultValue: "AAPL.US" },
+    { inputId: "compare-ticker-1", listId: "compare-ticker-list-1", codeId: "compare-ticker-code-1", defaultValue: "" },
+    { inputId: "compare-ticker-2", listId: "compare-ticker-list-2", codeId: "compare-ticker-code-2", defaultValue: "" }
+  ];
+
   let stockList = [];
 
-  tickerInput.value = "AAPL";
-  tickerCodeInput.value = "AAPL.US";
-
+  // Fetch the stock list once
   fetch("/api/chart/ticker")
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to fetch ticker data');
+      return res.json();
+    })
     .then(data => {
       stockList = data.map(stock => ({
         code: stock.Code || stock.code,
         name: stock.Name || stock.name,
       }));
+    })
+    .catch(err => {
+      console.error('Error fetching ticker list:', err);
+      // Optionally, show a UI error message
     });
 
-  tickerInput.addEventListener("input", function() {
-    const val = this.value.trim().toUpperCase();
-    if (val.length === 0) {
-      tickerList.style.display = "none";
-      return;
-    }
-    const filtered = stockList
-      .filter(
-        s =>
-        s.code.toUpperCase().includes(val) ||
-        (s.name && s.name.toUpperCase().includes(val))
-      )
-      .slice(0, 20);
+  // Helper function to set up a single input
+  function setupSingleInput(config) {
+    const tickerInput = document.getElementById(config.inputId);
+    const tickerList = document.getElementById(config.listId);
+    const tickerCodeInput = document.getElementById(config.codeId);
 
-    if (filtered.length === 0) {
-      tickerList.style.display = "none";
-      return;
+    // Set default value if provided
+    if (config.defaultValue) {
+      tickerInput.value = config.defaultValue.split('.')[0]; // e.g., "AAPL" from "AAPL.US"
+      tickerCodeInput.value = config.defaultValue;
     }
 
-    tickerList.innerHTML = filtered
-      .map(
-        s =>
-        `<li data-code="${s.code}" data-name="${s.name}">${s.code} — ${s.name}</li>`
-      )
-      .join("");
-    tickerList.style.display = "block";
-  });
+    // Input event listener for autocomplete
+    tickerInput.addEventListener("input", function() {
+      const val = this.value.trim().toUpperCase();
+      if (val.length === 0) {
+        tickerList.style.display = "none";
+        return;
+      }
+      const filtered = stockList
+        .filter(
+          s =>
+          s.code.toUpperCase().includes(val) ||
+          (s.name && s.name.toUpperCase().includes(val))
+        )
+        .slice(0, 20);
 
-  tickerList.addEventListener("click", function(e) {
-    if (e.target.tagName === "LI") {
-      tickerInput.value = e.target.getAttribute("data-code");
-      tickerCodeInput.value = e.target.getAttribute("data-code");
-      tickerList.style.display = "none";
-    }
-  });
+      if (filtered.length === 0) {
+        tickerList.style.display = "none";
+        return;
+      }
 
-  document.addEventListener("click", function(e) {
-    if (!tickerInput.contains(e.target) && !tickerList.contains(e.target)) {
-      tickerList.style.display = "none";
-    }
-  });
+      tickerList.innerHTML = filtered
+        .map(
+          s =>
+          `<li data-code="${s.code}" data-name="${s.name}">${s.code} — ${s.name}</li>`
+        )
+        .join("");
+      tickerList.style.display = "block";
+    });
+
+    // Click event listener for selecting from the list
+    tickerList.addEventListener("click", function(e) {
+      if (e.target.tagName === "LI") {
+        tickerInput.value = e.target.getAttribute("data-code");
+        tickerCodeInput.value = e.target.getAttribute("data-code");
+        tickerList.style.display = "none";
+      }
+    });
+
+    // Global click to hide the list (specific to this input/list)
+    document.addEventListener("click", function(e) {
+      if (!tickerInput.contains(e.target) && !tickerList.contains(e.target)) {
+        tickerList.style.display = "none";
+      }
+    });
+  }
+
+  // Set up all inputs using the helper
+  inputs.forEach(setupSingleInput);
 }
 
 function newsExpandSrink() {
@@ -554,5 +592,25 @@ async function deleteCacheHistory() {
   } catch (error) {
     console.error('Error deleting cache:', error);
     alert('Failed to delete cache: ' + error.message);
+  }
+}
+
+
+
+function toggleCompareInputs(chartType) {
+  const compareContainer = document.querySelector('#toolbarLeft .comparison-tickers-container');
+
+  if (!compareContainer) {
+    console.warn('Comparison container not found. Ensure the HTML has .comparison-tickers-container.');
+    return;
+  }
+
+  const lowerCaseType = chartType.toLowerCase();
+
+  if (lowerCaseType === 'line' || lowerCaseType === 'area')
+     { 
+    compareContainer.style.display = 'flex'; 
+  } else {
+    compareContainer.style.display = 'none';
   }
 }
