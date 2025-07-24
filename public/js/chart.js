@@ -3,15 +3,33 @@ let earliestDateLoaded = null;
 let isLoadingMore = false;
 let chart, chartContainer, series, volumeSeries;
 let baseUrl = '/api/chart/';
+let compareSeries = [];
+
 
 document.addEventListener("DOMContentLoaded", init);
 chartContainer = document.getElementById("chartDiv");
 
 async function init() {
   setupChart();
+  setMaxDateTime(); 
   setupTicker();
   chartExpandSrink();
   newsExpandSrink();
+}
+
+function setMaxDateTime() {
+  const now = new Date();
+  
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  
+  const maxDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+  document.getElementById('dateFrom').max = maxDateTime;
+  document.getElementById('dateTo').max = maxDateTime;
 }
 
 function setupChart() {
@@ -49,7 +67,7 @@ const chartTypeSelect = document.getElementById('chartType');
   } else {
     console.warn('Chart type dropdown (id="chartType") not found.');
   } 
-  
+
    const inputs = [
     { inputId: "ticker", listId: "ticker-list", codeId: "ticker-code", defaultValue: "AAPL.US" },
     { inputId: "compare-ticker-1", listId: "compare-ticker-list-1", codeId: "compare-ticker-code-1", defaultValue: "" },
@@ -188,6 +206,11 @@ async function fetchAndRenderChartData(options = {}) {
   } = options;
   const isStatic = interval === 'static';
 
+  // Get comparison symbols from inputs (adjust IDs if needed)
+  const compareSymbol1 = document.getElementById('compare-ticker-code-1')?.value.trim() || '';
+  const compareSymbol2 = document.getElementById('compare-ticker-code-2')?.value.trim() || '';
+  const compareSymbols = [compareSymbol1, compareSymbol2].filter(sym => sym);
+
   let startDate = new Date(fromStr);
   if (isStatic) {
     startDate.setHours(0, 0, 0, 0);
@@ -197,58 +220,86 @@ async function fetchAndRenderChartData(options = {}) {
     endDate.setHours(23, 59, 59, 999);
   }
 
-  const url = new URL('ohlc', window.location.origin + baseUrl);
-  url.searchParams.set('symbol', symbol);
-  url.searchParams.set('from', startDate.toISOString());
-  url.searchParams.set('to', endDate.toISOString());
+  // Helper to build URL for any symbol
+  const buildUrl = (sym) => {
+    const url = new URL('ohlc', window.location.origin + baseUrl);
+    url.searchParams.set('symbol', sym);
+    url.searchParams.set('from', startDate.toISOString());
+    url.searchParams.set('to', endDate.toISOString());
+    return url;
+  };
 
-  let rawOhlcData = [];
+  let mainData = [];
+  let compareDataArray = [];
+
   try {
-    const resp = await fetch(url.toString());
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-    const payload = await resp.json();
-    if (payload.success === false) throw new Error(payload.message || 'Server returned an error');
+    // Fetch main symbol data
+    const mainResp = await fetch(buildUrl(symbol).toString());
+    if (!mainResp.ok) throw new Error(`HTTP ${mainResp.status} ${mainResp.statusText}`);
+    const mainPayload = await mainResp.json();
+    if (mainPayload.success === false) throw new Error(mainPayload.message || 'Server returned an error');
 
-    const rows = Array.isArray(payload) ? payload : (payload.data || []);
-    rawOhlcData = rows.map(d => ({
-        time: Math.floor(Date.parse(d.datetime) / 1000),
-        open: parseFloat(d.open),
-        high: parseFloat(d.high),
-        low: parseFloat(d.low),
-        close: parseFloat(d.close),
-        volume: parseInt(d.volume, 10),
-      }))
-      .filter(d => !Object.values(d).some(isNaN))
-      .sort((a, b) => a.time - b.time);
+    const mainRows = Array.isArray(mainPayload) ? mainPayload : (mainPayload.data || []);
+    mainData = mainRows.map(d => ({
+      time: Math.floor(Date.parse(d.datetime) / 1000),
+      open: parseFloat(d.open),
+      high: parseFloat(d.high),
+      low: parseFloat(d.low),
+      close: parseFloat(d.close),
+      volume: parseInt(d.volume, 10),
+    }))
+    .filter(d => !Object.values(d).some(isNaN))
+    .sort((a, b) => a.time - b.time);
 
+    // Fetch comparison data only for Line or Area charts
+    const lowerCaseType = chartType.toLowerCase();
+    if ((lowerCaseType === 'line' || lowerCaseType === 'area') && compareSymbols.length > 0) {
+      const comparePromises = compareSymbols.map(async (sym) => {
+        const resp = await fetch(buildUrl(sym).toString());
+        if (!resp.ok) return [];  // Skip if fetch fails
+        const payload = await resp.json();
+        const rows = Array.isArray(payload) ? payload : (payload.data || []);
+        return rows.map(d => ({
+          time: Math.floor(Date.parse(d.datetime) / 1000),
+          open: parseFloat(d.open),
+          high: parseFloat(d.high),
+          low: parseFloat(d.low),
+          close: parseFloat(d.close),
+          volume: parseInt(d.volume, 10),
+        }))
+        .filter(d => !Object.values(d).some(isNaN))
+        .sort((a, b) => a.time - b.time);
+      });
+      compareDataArray = await Promise.all(comparePromises);
+    }
   } catch (e) {
     console.error('Failed to load or parse OHLC data:', e);
     chartContainer.innerHTML = `<div class="chart-error">Could not load chart data: ${e.message}</div>`;
     return;
   }
 
-  let finalData = rawOhlcData;
-  if (isStatic && rawOhlcData.length > 0) {
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const spanDays = (endDate - startDate) / msPerDay;
-    const slots = getStaticSlots(spanDays);
-    const allowedTimestamps = new Set();
+  let finalData = mainData;
+  // if (isStatic && mainData.length > 0) {
+  //   const msPerDay = 24 * 60 * 60 * 1000;
+  //   const spanDays = (endDate - startDate) / msPerDay;
+  //   const slots = getStaticSlots(spanDays);
+  //   const allowedTimestamps = new Set();
 
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = d.getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-      if (spanDays > 365 && dayOfWeek !== 1 && dayOfWeek !== 5) continue;
-      slots.forEach(({ h, m }) => {
-        const dt = new Date(d);
-        dt.setHours(h, m, 0, 0);
-        allowedTimestamps.add(Math.floor(dt.getTime() / 1000));
-      });
-    }
-    finalData = rawOhlcData.filter(d => allowedTimestamps.has(d.time));
-  }
+  //   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+  //     const dayOfWeek = d.getDay();
+  //     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+  //     if (spanDays > 365 && dayOfWeek !== 1 && dayOfWeek !== 5) continue;
+  //     slots.forEach(({ h, m }) => {
+  //       const dt = new Date(d);
+  //       dt.setHours(h, m, 0, 0);
+  //       allowedTimestamps.add(Math.floor(dt.getTime() / 1000));
+  //     });
+  //   }
+  //   finalData = mainData.filter(d => allowedTimestamps.has(d.time));
+  // }
   ohlcData = finalData;
 
-  switchChartType(chartType, finalData);
+  switchChartType(chartType, finalData, compareDataArray);
 
   if (finalData.length > 0) {
     applyAxisConfig(finalData);
@@ -260,6 +311,7 @@ async function fetchAndRenderChartData(options = {}) {
     setTimeout(() => setupChart(), 100);
   }
 }
+
 
 function isTradingDay(d) {
   const wd = d.getDay();
@@ -297,37 +349,58 @@ function getStaticSlots(spanDays) {
   }
 }
 
-function switchChartType(type, data) {
+function switchChartType(type, mainData, compareDataArray = []) {
+  // Clear existing main series
   if (series) {
     chart.removeSeries(series);
     series = null;
   }
 
-  if (!data || data.length === 0) {
+  // Clear existing comparison series
+  if (compareSeries && compareSeries.length > 0) {
+    compareSeries.forEach(cs => chart.removeSeries(cs));
+    compareSeries = [];
+  }
+
+  if (!mainData || mainData.length === 0) {
     return;
   }
 
   const lowerCaseType = type.toLowerCase();
-  const candleData = data;
-  const lineData = data.map(d => ({ time: d.time, value: d.close }));
+  const candleData = mainData;
+  const lineData = mainData.map(d => ({ time: d.time, value: d.close }));
 
-  switch (lowerCaseType) {
-    case 'area':
-      series = chart.addAreaSeries({
+  // Static colors
+  const mainColor = '#ADD8E6';  // Light blue
+  const compareColors = ['#90EE90', '#FFDAB9'];  // Light green, light orange
+
+  // Helper function to create a series of the matching type
+  const createSeries = (color, seriesData) => {
+    if (lowerCaseType === 'area') {
+      const s = chart.addAreaSeries({
         topColor: '#7bb5ff88',
         bottomColor: '#ffffff00',
-        lineColor: '#2196f3',
+        lineColor: color,
         lineWidth: 2,
       });
-      series.setData(lineData);
-      break;
+      s.setData(seriesData);
+      return s;
+    } else if (lowerCaseType === 'line') {
+      const s = chart.addLineSeries({
+        color: color,
+        lineWidth: 2,
+      });
+      s.setData(seriesData);
+      return s;
+    }
+    return null;  // No series for non-matching types
+  };
 
+  // Render main series
+  switch (lowerCaseType) {
+    case 'area':
     case 'line':
-      series = chart.addLineSeries({
-        color: '#2196f3',
-        lineWidth: 2,
-      });
-      series.setData(lineData);
+      series = createSeries(mainColor, lineData);
       break;
 
     case 'candlestick':
@@ -343,7 +416,7 @@ function switchChartType(type, data) {
 
     case 'baseline':
       series = chart.addBaselineSeries({
-        baseValue: { type: 'price', price: data[0]?.close || 0 },
+        baseValue: { type: 'price', price: mainData[0]?.close || 0 },
         topLineColor: 'rgba( 38, 166, 154, 1)',
         topFillColor1: 'rgba( 38, 166, 154, 0.28)',
         topFillColor2: 'rgba( 38, 166, 154, 0.05)',
@@ -356,8 +429,24 @@ function switchChartType(type, data) {
 
     default:
       console.error('Chart type not recognized:', lowerCaseType);
+      return;
+  }
+
+  // Render comparison series only for line or area
+  if (lowerCaseType === 'line' || lowerCaseType === 'area') {
+    compareDataArray.forEach((compareData, index) => {
+      if (compareData && compareData.length > 0) {
+        const compareLineData = compareData.map(d => ({ time: d.time, value: d.close }));
+        const color = compareColors[index % compareColors.length];
+        const cs = createSeries(color, compareLineData);
+        if (cs) {
+          compareSeries.push(cs);
+        }
+      }
+    });
   }
 }
+
 
 function validateChartForm() {
   const tickerCode = document.getElementById('ticker-code').value.trim();
