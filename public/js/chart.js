@@ -2,16 +2,20 @@ let ohlcData = [];
 let earliestDateLoaded = null;
 let isLoadingMore = false;
 let chart, chartContainer, series, volumeSeries;
-let baseUrl = '/api/chart/';
+let baseUrl = "/api/chart/";
 let compareSeries = [];
-
-
+let renkoSettings = {
+  type: "fixed",
+  fixedBrickSize: 1.0,
+  atrPeriod: 14,
+  percentageValue: 1,
+};
 document.addEventListener("DOMContentLoaded", init);
 chartContainer = document.getElementById("chartDiv");
 
 async function init() {
   setupChart();
-  setMaxDateTime(); 
+  setMaxDateTime();
   setupTicker();
   chartExpandSrink();
   newsExpandSrink();
@@ -19,17 +23,17 @@ async function init() {
 
 function setMaxDateTime() {
   const now = new Date();
-  
+
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
   const maxDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
-  document.getElementById('dateFrom').max = maxDateTime;
-  document.getElementById('dateTo').max = maxDateTime;
+  document.getElementById("dateFrom").max = maxDateTime;
+  document.getElementById("dateTo").max = maxDateTime;
 }
 
 function setupChart() {
@@ -40,56 +44,85 @@ function setupChart() {
   chart = LightweightCharts.createChart(chartContainer, {
     layout: {
       textColor: "black",
-      background: { type: "solid", color: "white" }
+      background: { type: "solid", color: "white" },
     },
     width: chartContainer.clientWidth,
-    height: chartContainer.clientHeight
+    height: chartContainer.clientHeight,
   });
 
-  window.addEventListener("resize", function resizeChartHandler() {
-    if (chart && chartContainer) {
-      chart.applyOptions({
-        width: chartContainer.clientWidth,
-        height: chartContainer.clientHeight
-      });
+  window.addEventListener(
+    "resize",
+    function resizeChartHandler() {
+      if (chart && chartContainer) {
+        chart.applyOptions({
+          width: chartContainer.clientWidth,
+          height: chartContainer.clientHeight,
+        });
+      }
+    },
+    { passive: true }
+  );
+
+  document.querySelectorAll('input[name="renkoType"]').forEach((radio) => {
+    radio.addEventListener("change", (e) => toggleRenkoFields(e.target.value));
+  });
+
+  window.onclick = function (event) {
+    const modal = document.getElementById("renkoSettingsModal");
+    if (event.target === modal) {
+      closeRenkoSettingsModal();
     }
-  }, { passive: true });
+  };
 }
 function setupTicker() {
-const chartTypeSelect = document.getElementById('chartType');
+  const chartTypeSelect = document.getElementById("chartType");
   if (chartTypeSelect) {
     toggleCompareInputs(chartTypeSelect.value);
 
-    chartTypeSelect.addEventListener('change', (e) => {
+    chartTypeSelect.addEventListener("change", (e) => {
       toggleCompareInputs(e.target.value);
     });
-
   } else {
     console.warn('Chart type dropdown (id="chartType") not found.');
-  } 
+  }
 
-   const inputs = [
-    { inputId: "ticker", listId: "ticker-list", codeId: "ticker-code", defaultValue: "AAPL.US" },
-    { inputId: "compare-ticker-1", listId: "compare-ticker-list-1", codeId: "compare-ticker-code-1", defaultValue: "" },
-    { inputId: "compare-ticker-2", listId: "compare-ticker-list-2", codeId: "compare-ticker-code-2", defaultValue: "" }
+  const inputs = [
+    {
+      inputId: "ticker",
+      listId: "ticker-list",
+      codeId: "ticker-code",
+      defaultValue: "AAPL.US",
+    },
+    {
+      inputId: "compare-ticker-1",
+      listId: "compare-ticker-list-1",
+      codeId: "compare-ticker-code-1",
+      defaultValue: "",
+    },
+    {
+      inputId: "compare-ticker-2",
+      listId: "compare-ticker-list-2",
+      codeId: "compare-ticker-code-2",
+      defaultValue: "",
+    },
   ];
 
   let stockList = [];
 
   // Fetch the stock list once
   fetch("/api/chart/ticker")
-    .then(res => {
-      if (!res.ok) throw new Error('Failed to fetch ticker data');
+    .then((res) => {
+      if (!res.ok) throw new Error("Failed to fetch ticker data");
       return res.json();
     })
-    .then(data => {
-      stockList = data.map(stock => ({
+    .then((data) => {
+      stockList = data.map((stock) => ({
         code: stock.Code || stock.code,
         name: stock.Name || stock.name,
       }));
     })
-    .catch(err => {
-      console.error('Error fetching ticker list:', err);
+    .catch((err) => {
+      console.error("Error fetching ticker list:", err);
       // Optionally, show a UI error message
     });
 
@@ -101,12 +134,12 @@ const chartTypeSelect = document.getElementById('chartType');
 
     // Set default value if provided
     if (config.defaultValue) {
-      tickerInput.value = config.defaultValue.split('.')[0]; // e.g., "AAPL" from "AAPL.US"
+      tickerInput.value = config.defaultValue.split(".")[0]; // e.g., "AAPL" from "AAPL.US"
       tickerCodeInput.value = config.defaultValue;
     }
 
     // Input event listener for autocomplete
-    tickerInput.addEventListener("input", function() {
+    tickerInput.addEventListener("input", function () {
       const val = this.value.trim().toUpperCase();
       if (val.length === 0) {
         tickerList.style.display = "none";
@@ -114,9 +147,9 @@ const chartTypeSelect = document.getElementById('chartType');
       }
       const filtered = stockList
         .filter(
-          s =>
-          s.code.toUpperCase().includes(val) ||
-          (s.name && s.name.toUpperCase().includes(val))
+          (s) =>
+            s.code.toUpperCase().includes(val) ||
+            (s.name && s.name.toUpperCase().includes(val))
         )
         .slice(0, 20);
 
@@ -127,15 +160,15 @@ const chartTypeSelect = document.getElementById('chartType');
 
       tickerList.innerHTML = filtered
         .map(
-          s =>
-          `<li data-code="${s.code}" data-name="${s.name}">${s.code} — ${s.name}</li>`
+          (s) =>
+            `<li data-code="${s.code}" data-name="${s.name}">${s.code} — ${s.name}</li>`
         )
         .join("");
       tickerList.style.display = "block";
     });
 
     // Click event listener for selecting from the list
-    tickerList.addEventListener("click", function(e) {
+    tickerList.addEventListener("click", function (e) {
       if (e.target.tagName === "LI") {
         tickerInput.value = e.target.getAttribute("data-code");
         tickerCodeInput.value = e.target.getAttribute("data-code");
@@ -144,7 +177,7 @@ const chartTypeSelect = document.getElementById('chartType');
     });
 
     // Global click to hide the list (specific to this input/list)
-    document.addEventListener("click", function(e) {
+    document.addEventListener("click", function (e) {
       if (!tickerInput.contains(e.target) && !tickerList.contains(e.target)) {
         tickerList.style.display = "none";
       }
@@ -160,7 +193,7 @@ function newsExpandSrink() {
   const expandNewsBtn = document.getElementById("expandNewsBtn");
   const newsExpandIcon = document.getElementById("newsExpandIcon");
 
-  expandNewsBtn.addEventListener("click", function() {
+  expandNewsBtn.addEventListener("click", function () {
     newsCard.classList.toggle("news-expanded");
     if (newsCard.classList.contains("news-expanded")) {
       newsExpandIcon.textContent = "fullscreen_exit";
@@ -176,7 +209,7 @@ function chartExpandSrink() {
 
   document
     .getElementById("expandChartBtn")
-    .addEventListener("click", function() {
+    .addEventListener("click", function () {
       const chartCard = document.querySelector(".chart-area.card");
       const icon = document.getElementById("expandIcon");
       const chartContainer = document.getElementById("chartDiv");
@@ -202,14 +235,16 @@ async function fetchAndRenderChartData(options = {}) {
     from: fromStr,
     to: toStr,
     interval,
-    chartType = 'Candlestick',
+    chartType = "Candlestick",
   } = options;
-  const isStatic = interval === 'static';
+  const isStatic = interval === "static";
 
   // Get comparison symbols from inputs (adjust IDs if needed)
-  const compareSymbol1 = document.getElementById('compare-ticker-code-1')?.value.trim() || '';
-  const compareSymbol2 = document.getElementById('compare-ticker-code-2')?.value.trim() || '';
-  const compareSymbols = [compareSymbol1, compareSymbol2].filter(sym => sym);
+  const compareSymbol1 =
+    document.getElementById("compare-ticker-code-1")?.value.trim() || "";
+  const compareSymbol2 =
+    document.getElementById("compare-ticker-code-2")?.value.trim() || "";
+  const compareSymbols = [compareSymbol1, compareSymbol2].filter((sym) => sym);
 
   let startDate = new Date(fromStr);
   if (isStatic) {
@@ -222,10 +257,10 @@ async function fetchAndRenderChartData(options = {}) {
 
   // Helper to build URL for any symbol
   const buildUrl = (sym) => {
-    const url = new URL('ohlc', window.location.origin + baseUrl);
-    url.searchParams.set('symbol', sym);
-    url.searchParams.set('from', startDate.toISOString());
-    url.searchParams.set('to', endDate.toISOString());
+    const url = new URL("ohlc", window.location.origin + baseUrl);
+    url.searchParams.set("symbol", sym);
+    url.searchParams.set("from", startDate.toISOString());
+    url.searchParams.set("to", endDate.toISOString());
     return url;
   };
 
@@ -235,45 +270,54 @@ async function fetchAndRenderChartData(options = {}) {
   try {
     // Fetch main symbol data
     const mainResp = await fetch(buildUrl(symbol).toString());
-    if (!mainResp.ok) throw new Error(`HTTP ${mainResp.status} ${mainResp.statusText}`);
+    if (!mainResp.ok)
+      throw new Error(`HTTP ${mainResp.status} ${mainResp.statusText}`);
     const mainPayload = await mainResp.json();
-    if (mainPayload.success === false) throw new Error(mainPayload.message || 'Server returned an error');
+    if (mainPayload.success === false)
+      throw new Error(mainPayload.message || "Server returned an error");
 
-    const mainRows = Array.isArray(mainPayload) ? mainPayload : (mainPayload.data || []);
-    mainData = mainRows.map(d => ({
-      time: Math.floor(Date.parse(d.datetime) / 1000),
-      open: parseFloat(d.open),
-      high: parseFloat(d.high),
-      low: parseFloat(d.low),
-      close: parseFloat(d.close),
-      volume: parseInt(d.volume, 10),
-    }))
-    .filter(d => !Object.values(d).some(isNaN))
-    .sort((a, b) => a.time - b.time);
+    const mainRows = Array.isArray(mainPayload)
+      ? mainPayload
+      : mainPayload.data || [];
+    mainData = mainRows
+      .map((d) => ({
+        time: Math.floor(Date.parse(d.datetime) / 1000),
+        open: parseFloat(d.open),
+        high: parseFloat(d.high),
+        low: parseFloat(d.low),
+        close: parseFloat(d.close),
+        volume: parseInt(d.volume, 10),
+      }))
+      .filter((d) => !Object.values(d).some(isNaN))
+      .sort((a, b) => a.time - b.time);
 
     // Fetch comparison data only for Line or Area charts
     const lowerCaseType = chartType.toLowerCase();
-    if ((lowerCaseType === 'line' || lowerCaseType === 'area') && compareSymbols.length > 0) {
+    if (
+      (lowerCaseType === "line" || lowerCaseType === "area") &&
+      compareSymbols.length > 0
+    ) {
       const comparePromises = compareSymbols.map(async (sym) => {
         const resp = await fetch(buildUrl(sym).toString());
-        if (!resp.ok) return [];  // Skip if fetch fails
+        if (!resp.ok) return []; // Skip if fetch fails
         const payload = await resp.json();
-        const rows = Array.isArray(payload) ? payload : (payload.data || []);
-        return rows.map(d => ({
-          time: Math.floor(Date.parse(d.datetime) / 1000),
-          open: parseFloat(d.open),
-          high: parseFloat(d.high),
-          low: parseFloat(d.low),
-          close: parseFloat(d.close),
-          volume: parseInt(d.volume, 10),
-        }))
-        .filter(d => !Object.values(d).some(isNaN))
-        .sort((a, b) => a.time - b.time);
+        const rows = Array.isArray(payload) ? payload : payload.data || [];
+        return rows
+          .map((d) => ({
+            time: Math.floor(Date.parse(d.datetime) / 1000),
+            open: parseFloat(d.open),
+            high: parseFloat(d.high),
+            low: parseFloat(d.low),
+            close: parseFloat(d.close),
+            volume: parseInt(d.volume, 10),
+          }))
+          .filter((d) => !Object.values(d).some(isNaN))
+          .sort((a, b) => a.time - b.time);
       });
       compareDataArray = await Promise.all(comparePromises);
     }
   } catch (e) {
-    console.error('Failed to load or parse OHLC data:', e);
+    console.error("Failed to load or parse OHLC data:", e);
     chartContainer.innerHTML = `<div class="chart-error">Could not load chart data: ${e.message}</div>`;
     return;
   }
@@ -297,8 +341,14 @@ async function fetchAndRenderChartData(options = {}) {
   //   }
   //   finalData = mainData.filter(d => allowedTimestamps.has(d.time));
   // }
-  ohlcData = finalData;
+  if (chartType.toLowerCase() === "heikin") {
+    finalData = computeHeikinAshi(finalData);
+  }
+  if (chartType.toLowerCase() === 'renko') {
+  finalData = computeRenko(finalData);
+  }
 
+  ohlcData = finalData;
   switchChartType(chartType, finalData, compareDataArray);
 
   if (finalData.length > 0) {
@@ -307,11 +357,11 @@ async function fetchAndRenderChartData(options = {}) {
     earliestDateLoaded = finalData[0]?.time;
   } else {
     if (series) chart.removeSeries(series);
-    chartContainer.innerHTML = '<div class="chart-error">No data available for the selected static intervals.</div>';
+    chartContainer.innerHTML =
+      '<div class="chart-error">No data available for the selected static intervals.</div>';
     setTimeout(() => setupChart(), 100);
   }
 }
-
 
 function isTradingDay(d) {
   const wd = d.getDay();
@@ -321,27 +371,52 @@ function isTradingDay(d) {
 function getStaticSlots(spanDays) {
   if (spanDays <= 5) {
     return [
-      { h: 4, m: 0 }, { h: 5, m: 0 }, { h: 6, m: 0 }, { h: 7, m: 0 },
-      { h: 8, m: 0 }, { h: 9, m: 0 }, { h: 10, m: 0 }, { h: 12, m: 0 },
-      { h: 14, m: 0 }, { h: 16, m: 0 }, { h: 16, m: 30 }, { h: 17, m: 0 },
+      { h: 4, m: 0 },
+      { h: 5, m: 0 },
+      { h: 6, m: 0 },
+      { h: 7, m: 0 },
+      { h: 8, m: 0 },
+      { h: 9, m: 0 },
+      { h: 10, m: 0 },
+      { h: 12, m: 0 },
+      { h: 14, m: 0 },
+      { h: 16, m: 0 },
+      { h: 16, m: 30 },
+      { h: 17, m: 0 },
       { h: 19, m: 0 },
     ];
   } else if (spanDays <= 15) {
     return [
-      { h: 4, m: 0 }, { h: 7, m: 0 }, { h: 8, m: 30 }, { h: 9, m: 30 },
-      { h: 11, m: 0 }, { h: 13, m: 30 }, { h: 16, m: 30 }, { h: 17, m: 30 },
+      { h: 4, m: 0 },
+      { h: 7, m: 0 },
+      { h: 8, m: 30 },
+      { h: 9, m: 30 },
+      { h: 11, m: 0 },
+      { h: 13, m: 30 },
+      { h: 16, m: 30 },
+      { h: 17, m: 30 },
       { h: 19, m: 0 },
     ];
   } else if (spanDays <= 60) {
     return [
-      { h: 4, m: 0 }, { h: 9, m: 30 }, { h: 12, m: 0 }, { h: 16, m: 30 }, { h: 19, m: 0 },
+      { h: 4, m: 0 },
+      { h: 9, m: 30 },
+      { h: 12, m: 0 },
+      { h: 16, m: 30 },
+      { h: 19, m: 0 },
     ];
   } else if (spanDays <= 120) {
     return [
-      { h: 4, m: 0 }, { h: 9, m: 30 }, { h: 16, m: 30 }, { h: 19, m: 0 },
+      { h: 4, m: 0 },
+      { h: 9, m: 30 },
+      { h: 16, m: 30 },
+      { h: 19, m: 0 },
     ];
   } else if (spanDays <= 210) {
-    return [{ h: 4, m: 0 }, { h: 19, m: 0 }];
+    return [
+      { h: 4, m: 0 },
+      { h: 19, m: 0 },
+    ];
   } else if (spanDays <= 365) {
     return [{ h: 19, m: 0 }];
   } else {
@@ -358,7 +433,7 @@ function switchChartType(type, mainData, compareDataArray = []) {
 
   // Clear existing comparison series
   if (compareSeries && compareSeries.length > 0) {
-    compareSeries.forEach(cs => chart.removeSeries(cs));
+    compareSeries.forEach((cs) => chart.removeSeries(cs));
     compareSeries = [];
   }
 
@@ -368,24 +443,24 @@ function switchChartType(type, mainData, compareDataArray = []) {
 
   const lowerCaseType = type.toLowerCase();
   const candleData = mainData;
-  const lineData = mainData.map(d => ({ time: d.time, value: d.close }));
+  const lineData = mainData.map((d) => ({ time: d.time, value: d.close }));
 
   // Static colors
-  const mainColor = '#ADD8E6';  // Light blue
-  const compareColors = ['#90EE90', '#FFDAB9'];  // Light green, light orange
+  const mainColor = "#ADD8E6"; // Light blue
+  const compareColors = ["#90EE90", "#FFDAB9"]; // Light green, light orange
 
   // Helper function to create a series of the matching type
   const createSeries = (color, seriesData) => {
-    if (lowerCaseType === 'area') {
+    if (lowerCaseType === "area") {
       const s = chart.addAreaSeries({
-        topColor: '#7bb5ff88',
-        bottomColor: '#ffffff00',
+        topColor: "#7bb5ff88",
+        bottomColor: "#ffffff00",
         lineColor: color,
         lineWidth: 2,
       });
       s.setData(seriesData);
       return s;
-    } else if (lowerCaseType === 'line') {
+    } else if (lowerCaseType === "line") {
       const s = chart.addLineSeries({
         color: color,
         lineWidth: 2,
@@ -393,50 +468,74 @@ function switchChartType(type, mainData, compareDataArray = []) {
       s.setData(seriesData);
       return s;
     }
-    return null;  // No series for non-matching types
+    return null; // No series for non-matching types
   };
 
   // Render main series
   switch (lowerCaseType) {
-    case 'area':
-    case 'line':
+    case "renko":
+      series = chart.addCandlestickSeries({
+        upColor: "#00ff00", // Green for up bricks
+        downColor: "#ff0000", // Red for down bricks
+        borderVisible: false,
+        wickVisible: false, // No wicks for Renko
+      });
+      series.setData(candleData); // Use computed Renko data
+      break;
+
+    case "heikin":
+      series = chart.addCandlestickSeries({
+        upColor: "#00ff00", // Green for up candles
+        downColor: "#ff0000", // Red for down candles
+        borderVisible: false,
+        wickUpColor: "#00ff00",
+        wickDownColor: "#ff0000",
+      });
+      series.setData(candleData); // Use computed Heikin Ashi data
+      break;
+
+    case "area":
+    case "line":
       series = createSeries(mainColor, lineData);
       break;
 
-    case 'candlestick':
+    case "candlestick":
       series = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
+        upColor: "#26a69a",
+        downColor: "#ef5350",
         borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
+        wickUpColor: "#26a69a",
+        wickDownColor: "#ef5350",
       });
       series.setData(candleData);
       break;
 
-    case 'baseline':
+    case "baseline":
       series = chart.addBaselineSeries({
-        baseValue: { type: 'price', price: mainData[0]?.close || 0 },
-        topLineColor: 'rgba( 38, 166, 154, 1)',
-        topFillColor1: 'rgba( 38, 166, 154, 0.28)',
-        topFillColor2: 'rgba( 38, 166, 154, 0.05)',
-        bottomLineColor: 'rgba( 239, 83, 80, 1)',
-        bottomFillColor1: 'rgba( 239, 83, 80, 0.05)',
-        bottomFillColor2: 'rgba( 239, 83, 80, 0.28)',
+        baseValue: { type: "price", price: mainData[0]?.close || 0 },
+        topLineColor: "rgba( 38, 166, 154, 1)",
+        topFillColor1: "rgba( 38, 166, 154, 0.28)",
+        topFillColor2: "rgba( 38, 166, 154, 0.05)",
+        bottomLineColor: "rgba( 239, 83, 80, 1)",
+        bottomFillColor1: "rgba( 239, 83, 80, 0.05)",
+        bottomFillColor2: "rgba( 239, 83, 80, 0.28)",
       });
       series.setData(lineData);
       break;
 
     default:
-      console.error('Chart type not recognized:', lowerCaseType);
+      console.error("Chart type not recognized:", lowerCaseType);
       return;
   }
 
   // Render comparison series only for line or area
-  if (lowerCaseType === 'line' || lowerCaseType === 'area') {
+  if (lowerCaseType === "line" || lowerCaseType === "area") {
     compareDataArray.forEach((compareData, index) => {
       if (compareData && compareData.length > 0) {
-        const compareLineData = compareData.map(d => ({ time: d.time, value: d.close }));
+        const compareLineData = compareData.map((d) => ({
+          time: d.time,
+          value: d.close,
+        }));
         const color = compareColors[index % compareColors.length];
         const cs = createSeries(color, compareLineData);
         if (cs) {
@@ -447,21 +546,18 @@ function switchChartType(type, mainData, compareDataArray = []) {
   }
 }
 
-
 function validateChartForm() {
-  const tickerCode = document.getElementById('ticker-code').value.trim();
-  const dateFrom = document.getElementById('dateFrom').value.trim();
-  const dateTo = document.getElementById('dateTo').value.trim();
-  const interval = document.getElementById('interval').value.trim();
-  const chartType = document.getElementById('chartType').value.trim();
-  const errorFields = [
-    'ticker', 'dateFrom', 'dateTo', 'interval', 'chartType'
-  ];
-  errorFields.forEach(id => {
-    const err = document.getElementById('error-' + id);
-    if (err) err.textContent = '';
+  const tickerCode = document.getElementById("ticker-code").value.trim();
+  const dateFrom = document.getElementById("dateFrom").value.trim();
+  const dateTo = document.getElementById("dateTo").value.trim();
+  const interval = document.getElementById("interval").value.trim();
+  const chartType = document.getElementById("chartType").value.trim();
+  const errorFields = ["ticker", "dateFrom", "dateTo", "interval", "chartType"];
+  errorFields.forEach((id) => {
+    const err = document.getElementById("error-" + id);
+    if (err) err.textContent = "";
     const input = document.getElementById(id);
-    if (input) input.classList.remove('input-error-border');
+    if (input) input.classList.remove("input-error-border");
   });
 
   let errors = [];
@@ -478,11 +574,11 @@ function validateChartForm() {
     errors.dateTo = "Start date/time must be before end date/time.";
   }
 
-  Object.keys(errors).forEach(id => {
-    const err = document.getElementById('error-' + id);
+  Object.keys(errors).forEach((id) => {
+    const err = document.getElementById("error-" + id);
     if (err) err.textContent = errors[id];
     const input = document.getElementById(id);
-    if (input) input.classList.add('input-error-border');
+    if (input) input.classList.add("input-error-border");
   });
 
   if (Object.keys(errors).length) return false;
@@ -492,7 +588,7 @@ function validateChartForm() {
     from: dateFrom,
     to: dateTo,
     interval: interval,
-    chartType: chartType
+    chartType: chartType,
   };
 
   fetchAndRenderChartData(formData);
@@ -501,67 +597,76 @@ function validateChartForm() {
 
 function Logout() {
   deleteCacheHistory();
-  fetch('/logout', {
-      method: 'GET',
-      credentials: 'same-origin'
-    })
-    .then(res => {
-      window.location.href = '/';
+  fetch("/logout", {
+    method: "GET",
+    credentials: "same-origin",
+  })
+    .then((res) => {
+      window.location.href = "/";
     })
     .catch(() => {
-      window.location.href = '/';
+      window.location.href = "/";
     });
 }
 
 function openChangePasswordModal() {
-  document.getElementById('changePasswordModal').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  document.getElementById("changePasswordModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
   clearPasswordForm();
-  setTimeout(() => document.getElementById('oldPassword').focus(), 80);
+  setTimeout(() => document.getElementById("oldPassword").focus(), 80);
 }
 
 function closeChangePasswordModal() {
-  document.getElementById('changePasswordModal').style.display = 'none';
-  document.body.style.overflow = '';
+  document.getElementById("changePasswordModal").style.display = "none";
+  document.body.style.overflow = "";
   clearPasswordForm();
 }
 
 function clearPasswordForm() {
-  ['oldPassword', 'newPassword', 'confirmPassword'].forEach(id => {
-    document.getElementById(id).value = '';
-    document.getElementById('error-' + id).textContent = '';
-    document.getElementById(id).classList.remove('input-error-border');
+  ["oldPassword", "newPassword", "confirmPassword"].forEach((id) => {
+    document.getElementById(id).value = "";
+    document.getElementById("error-" + id).textContent = "";
+    document.getElementById(id).classList.remove("input-error-border");
   });
 }
 
 async function submitChangePassword() {
-  updateEnvKey('PASSWORD', 'value');
+  updateEnvKey("PASSWORD", "value");
   let valid = true;
-  const oldPass = document.getElementById('oldPassword').value.trim();
-  const newPass = document.getElementById('newPassword').value.trim();
-  const confirmPass = document.getElementById('confirmPassword').value.trim();
+  const oldPass = document.getElementById("oldPassword").value.trim();
+  const newPass = document.getElementById("newPassword").value.trim();
+  const confirmPass = document.getElementById("confirmPassword").value.trim();
   if (!oldPass) {
     valid = false;
-    document.getElementById('error-oldPassword').textContent = 'Enter your old password.';
-    document.getElementById('oldPassword').classList.add('input-error-border');
+    document.getElementById("error-oldPassword").textContent =
+      "Enter your old password.";
+    document.getElementById("oldPassword").classList.add("input-error-border");
   }
   if (!newPass) {
     valid = false;
-    document.getElementById('error-newPassword').textContent = 'Enter a new password.';
-    document.getElementById('newPassword').classList.add('input-error-border');
+    document.getElementById("error-newPassword").textContent =
+      "Enter a new password.";
+    document.getElementById("newPassword").classList.add("input-error-border");
   } else if (newPass.length < 6) {
     valid = false;
-    document.getElementById('error-newPassword').textContent = 'At least 6 characters.';
-    document.getElementById('newPassword').classList.add('input-error-border');
+    document.getElementById("error-newPassword").textContent =
+      "At least 6 characters.";
+    document.getElementById("newPassword").classList.add("input-error-border");
   }
   if (!confirmPass) {
     valid = false;
-    document.getElementById('error-confirmPassword').textContent = 'Confirm your new password.';
-    document.getElementById('confirmPassword').classList.add('input-error-border');
+    document.getElementById("error-confirmPassword").textContent =
+      "Confirm your new password.";
+    document
+      .getElementById("confirmPassword")
+      .classList.add("input-error-border");
   } else if (newPass !== confirmPass) {
     valid = false;
-    document.getElementById('error-confirmPassword').textContent = 'Passwords do not match.';
-    document.getElementById('confirmPassword').classList.add('input-error-border');
+    document.getElementById("error-confirmPassword").textContent =
+      "Passwords do not match.";
+    document
+      .getElementById("confirmPassword")
+      .classList.add("input-error-border");
   }
 
   if (!valid) return false;
@@ -576,13 +681,13 @@ async function submitChangePassword() {
 }
 
 function updateInterval() {
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
-  const interval = document.getElementById('interval');
-  const errorSpan = document.getElementById('error-interval');
+  const dateFrom = document.getElementById("dateFrom").value;
+  const dateTo = document.getElementById("dateTo").value;
+  const interval = document.getElementById("interval");
+  const errorSpan = document.getElementById("error-interval");
   const options = interval.options;
 
-  errorSpan.textContent = '';
+  errorSpan.textContent = "";
   for (let i = 0; i < options.length; i++) options[i].disabled = false;
 
   if (dateFrom && dateTo) {
@@ -599,7 +704,7 @@ function updateInterval() {
       }
     }
 
-    ['15m', '30m', '1h'].forEach(val => {
+    ["15m", "30m", "1h"].forEach((val) => {
       let opt = interval.querySelector(`option[value="${val}"]`);
       if (diffDays > 5) {
         if (opt) opt.disabled = true;
@@ -631,16 +736,16 @@ function applyAxisConfig(data) {
   chart.applyOptions({
     rightPriceScale: {
       autoScale: true,
-      scaleMargins: { top: 0.2, bottom: 0.1 }
+      scaleMargins: { top: 0.2, bottom: 0.1 },
     },
     timeScale: {
       tickMarkFormatter: (unixSeconds, tickType, locale) => {
         const d = new Date(unixSeconds * 1000);
         const day = d.getDate();
-        const month = d.toLocaleString(locale, { month: 'short' });
+        const month = d.toLocaleString(locale, { month: "short" });
         const year = d.getFullYear();
         const hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, "0");
 
         if (spanDays <= 1) {
           return `${hours}:${minutes}`;
@@ -656,19 +761,23 @@ function applyAxisConfig(data) {
         } else {
           return String(year);
         }
-      }
-    }
+      },
+    },
   });
 }
 
 async function deleteCacheHistory() {
-  if (!confirm('Are you sure you want to delete all cached chart history? This action cannot be undone.')) {
+  if (
+    !confirm(
+      "Are you sure you want to delete all cached chart history? This action cannot be undone."
+    )
+  ) {
     return;
   }
 
   try {
-    const response = await fetch('/api/chart/cache', {
-      method: 'DELETE',
+    const response = await fetch("/api/chart/cache", {
+      method: "DELETE",
     });
 
     const result = await response.json();
@@ -676,30 +785,213 @@ async function deleteCacheHistory() {
     if (response.ok && result.success) {
       alert(result.message);
     } else {
-      throw new Error(result.message || 'An unknown error occurred.');
+      throw new Error(result.message || "An unknown error occurred.");
     }
   } catch (error) {
-    console.error('Error deleting cache:', error);
-    alert('Failed to delete cache: ' + error.message);
+    console.error("Error deleting cache:", error);
+    alert("Failed to delete cache: " + error.message);
   }
 }
 
-
-
 function toggleCompareInputs(chartType) {
-  const compareContainer = document.querySelector('#toolbarLeft .comparison-tickers-container');
+  const compareContainer = document.querySelector(
+    "#toolbarLeft .comparison-tickers-container"
+  );
 
   if (!compareContainer) {
-    console.warn('Comparison container not found. Ensure the HTML has .comparison-tickers-container.');
+    console.warn(
+      "Comparison container not found. Ensure the HTML has .comparison-tickers-container."
+    );
     return;
   }
 
   const lowerCaseType = chartType.toLowerCase();
 
-  if (lowerCaseType === 'line' || lowerCaseType === 'area')
-     { 
-    compareContainer.style.display = 'flex'; 
+  if (lowerCaseType === "line" || lowerCaseType === "area") {
+    compareContainer.style.display = "flex";
   } else {
-    compareContainer.style.display = 'none';
+    compareContainer.style.display = "none";
   }
 }
+
+function computeHeikinAshi(ohlcData) {
+  if (ohlcData.length === 0) return haData;
+  let haData = [];
+  haData.push({
+    time: ohlcData[0].time,
+    open: ohlcData[0].open,
+    high: ohlcData[0].high,
+    low: ohlcData[0].low,
+    close: ohlcData[0].close,
+  });
+
+  for (let i = 1; i < ohlcData.length; i++) {
+    const prevHa = haData[i - 1];
+    const curr = ohlcData[i];
+
+    const haClose = (curr.open + curr.high + curr.low + curr.close) / 4;
+    const haOpen = (prevHa.open + prevHa.close) / 2;
+    const haHigh = Math.max(curr.high, haOpen, haClose);
+    const haLow = Math.min(curr.low, haOpen, haClose);
+
+    haData.push({
+      time: curr.time,
+      open: haOpen,
+      high: haHigh,
+      low: haLow,
+      close: haClose,
+    });
+  }
+
+  return haData;
+}
+
+function openRenkoSettingsModal() {
+  const modal = document.getElementById("renkoSettingsModal");
+  modal.style.display = "flex";
+
+  // Pre-fill form with current settings
+  document.querySelector(
+    `input[name="renkoType"][value="${renkoSettings.type}"]`
+  ).checked = true;
+  document.getElementById("fixedBrickSize").value =
+    renkoSettings.fixedBrickSize;
+  document.getElementById("atrPeriod").value = renkoSettings.atrPeriod;
+  document.getElementById("percentageValue").value =
+    renkoSettings.percentageValue;
+
+  toggleRenkoFields(renkoSettings.type); // Show correct fields
+}
+
+function closeRenkoSettingsModal() {
+  document.getElementById("renkoSettingsModal").style.display = "none";
+}
+
+function toggleRenkoFields(selectedType) {
+  document.getElementById("fixedSettings").style.display =
+    selectedType === "fixed" ? "block" : "none";
+  document.getElementById("atrSettings").style.display =
+    selectedType === "atr" ? "block" : "none";
+  document.getElementById("percentageSettings").style.display =
+    selectedType === "percentage" ? "block" : "none";
+}
+
+function saveRenkoSettings() {
+  const selectedType = document.querySelector(
+    'input[name="renkoType"]:checked'
+  ).value;
+  renkoSettings.type = selectedType;
+
+  if (selectedType === "fixed") {
+    renkoSettings.fixedBrickSize = parseFloat(
+      document.getElementById("fixedBrickSize").value
+    );
+  } else if (selectedType === "atr") {
+    renkoSettings.atrPeriod = parseInt(
+      document.getElementById("atrPeriod").value,
+      10
+    );
+  } else if (selectedType === "percentage") {
+    renkoSettings.percentageValue = parseFloat(
+      document.getElementById("percentageValue").value
+    );
+  }
+
+  closeRenkoSettingsModal();
+}
+function computeRenko(ohlcData) {
+  const renkoData = [];
+  if (ohlcData.length === 0) return renkoData;
+
+  console.log("Computing Renko with settings:", renkoSettings);
+  console.log("Computing Renko with settings:", ohlcData);
+  let brickSize;
+  if (renkoSettings.type === 'fixed') {
+    brickSize = renkoSettings.fixedBrickSize;
+  } else if (renkoSettings.type === 'atr') {
+    brickSize = calculateATR(ohlcData, renkoSettings.atrPeriod);
+  } else if (renkoSettings.type === 'percentage') {
+    brickSize = (ohlcData[0].close * renkoSettings.percentageValue) / 100;
+  }
+
+  if (brickSize <= 0) {
+    console.error('Invalid brick size');
+    return renkoData;  // Prevent division by zero or negative
+  }
+
+  let lastPrice = ohlcData[0].close;
+  let direction = 0; // 1 for up, -1 for down
+
+  ohlcData.forEach((bar) => {
+    const diff = bar.close - lastPrice;
+    let bricks = Math.floor(Math.abs(diff) / brickSize);  // Changed to 'let'
+
+    if (bricks > 0) {
+      const brickDirection = diff > 0 ? 1 : -1;
+      if (brickDirection !== direction && direction !== 0) {
+        // Reversal: add one brick in opposite direction
+        renkoData.push({
+          time: bar.time,
+          open: lastPrice,
+          high: lastPrice + brickSize * brickDirection,
+          low: lastPrice,
+          close: lastPrice + brickSize * brickDirection,
+        });
+        lastPrice += brickSize * brickDirection;
+        bricks--;  // Now safe to modify
+      }
+
+      for (let i = 0; i < bricks; i++) {
+        const open = lastPrice;
+        const close = open + brickSize * brickDirection;
+        renkoData.push({
+          time: bar.time,
+          open: open,
+          high: Math.max(open, close),
+          low: Math.min(open, close),
+          close: close,
+        });
+        lastPrice = close;
+      }
+      direction = brickDirection;
+    }
+  });
+
+  return renkoData;
+}
+
+function calculateATR(data, period) {
+  if (!data || data.length < period) {
+    console.warn('Insufficient data or invalid period for ATR calculation:', data?.length, period);
+    return 0; 
+  }
+
+  const trValues = [];
+  for (let i = 1; i < data.length; i++) {
+    const tr = Math.max(
+      data[i].high - data[i].low,
+      Math.abs(data[i].high - data[i - 1].close),
+      Math.abs(data[i].low - data[i - 1].close)
+    );
+    trValues.push(tr);
+  }
+
+  if (trValues.length === 0) {
+    return 0;
+  }
+
+  let atr = trValues.slice(0, period).reduce((sum, v) => sum + v, 0) / period;
+
+  for (let i = period; i < trValues.length; i++) {
+    atr = (atr * (period - 1) + trValues[i]) / period;
+  }
+
+  if (!isFinite(atr)) {
+    console.warn('ATR calculation produced invalid value:', atr);
+    return 1; 
+  }
+
+  return atr;
+}
+
+
