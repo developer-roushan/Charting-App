@@ -25,7 +25,7 @@ function setMaxDateTime() {
   const now = new Date();
 
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  const month = String(now.getMonth() + 1).padStart(2, "0"); 
   const day = String(now.getDate()).padStart(2, "0");
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
@@ -48,6 +48,8 @@ function setupChart() {
     },
     width: chartContainer.clientWidth,
     height: chartContainer.clientHeight,
+        handleScale: false,
+            handleScroll: false,
   });
 
   window.addEventListener(
@@ -82,9 +84,7 @@ function setupTicker() {
     chartTypeSelect.addEventListener("change", (e) => {
       toggleCompareInputs(e.target.value);
     });
-  } else {
-    console.warn('Chart type dropdown (id="chartType") not found.');
-  }
+  } 
 
   const inputs = [
     {
@@ -109,7 +109,6 @@ function setupTicker() {
 
   let stockList = [];
 
-  // Fetch the stock list once
   fetch("/api/chart/ticker")
     .then((res) => {
       if (!res.ok) throw new Error("Failed to fetch ticker data");
@@ -121,24 +120,20 @@ function setupTicker() {
         name: stock.Name || stock.name,
       }));
     })
-    .catch((err) => {
-      console.error("Error fetching ticker list:", err);
-      // Optionally, show a UI error message
+    .catch((err) => {     
+     
     });
 
-  // Helper function to set up a single input
   function setupSingleInput(config) {
     const tickerInput = document.getElementById(config.inputId);
     const tickerList = document.getElementById(config.listId);
     const tickerCodeInput = document.getElementById(config.codeId);
 
-    // Set default value if provided
     if (config.defaultValue) {
-      tickerInput.value = config.defaultValue.split(".")[0]; // e.g., "AAPL" from "AAPL.US"
+      tickerInput.value = config.defaultValue.split(".")[0]; 
       tickerCodeInput.value = config.defaultValue;
     }
 
-    // Input event listener for autocomplete
     tickerInput.addEventListener("input", function () {
       const val = this.value.trim().toUpperCase();
       if (val.length === 0) {
@@ -167,7 +162,6 @@ function setupTicker() {
       tickerList.style.display = "block";
     });
 
-    // Click event listener for selecting from the list
     tickerList.addEventListener("click", function (e) {
       if (e.target.tagName === "LI") {
         tickerInput.value = e.target.getAttribute("data-code");
@@ -176,7 +170,6 @@ function setupTicker() {
       }
     });
 
-    // Global click to hide the list (specific to this input/list)
     document.addEventListener("click", function (e) {
       if (!tickerInput.contains(e.target) && !tickerList.contains(e.target)) {
         tickerList.style.display = "none";
@@ -184,7 +177,6 @@ function setupTicker() {
     });
   }
 
-  // Set up all inputs using the helper
   inputs.forEach(setupSingleInput);
 }
 
@@ -239,7 +231,6 @@ async function fetchAndRenderChartData(options = {}) {
   } = options;
   const isStatic = interval === "static";
 
-  // Get comparison symbols from inputs (adjust IDs if needed)
   const compareSymbol1 =
     document.getElementById("compare-ticker-code-1")?.value.trim() || "";
   const compareSymbol2 =
@@ -255,20 +246,24 @@ async function fetchAndRenderChartData(options = {}) {
     endDate.setHours(23, 59, 59, 999);
   }
 
-  // Helper to build URL for any symbol
-  const buildUrl = (sym) => {
-    const url = new URL("ohlc", window.location.origin + baseUrl);
-    url.searchParams.set("symbol", sym);
-    url.searchParams.set("from", startDate.toISOString());
-    url.searchParams.set("to", endDate.toISOString());
-    return url;
-  };
+const buildUrl = (sym) => {
+  const url = new URL('ohlc', window.location.origin + baseUrl);
+  url.searchParams.set('symbol', sym);
+  url.searchParams.set('from', startDate.toISOString());
+  url.searchParams.set('to', endDate.toISOString());
+
+  if (!isStatic) {
+    url.searchParams.set('interval', interval); 
+  }
+
+  return url;
+};
+
 
   let mainData = [];
   let compareDataArray = [];
 
   try {
-    // Fetch main symbol data
     const mainResp = await fetch(buildUrl(symbol).toString());
     if (!mainResp.ok)
       throw new Error(`HTTP ${mainResp.status} ${mainResp.statusText}`);
@@ -291,7 +286,6 @@ async function fetchAndRenderChartData(options = {}) {
       .filter((d) => !Object.values(d).some(isNaN))
       .sort((a, b) => a.time - b.time);
 
-    // Fetch comparison data only for Line or Area charts
     const lowerCaseType = chartType.toLowerCase();
     if (
       (lowerCaseType === "line" || lowerCaseType === "area") &&
@@ -299,7 +293,7 @@ async function fetchAndRenderChartData(options = {}) {
     ) {
       const comparePromises = compareSymbols.map(async (sym) => {
         const resp = await fetch(buildUrl(sym).toString());
-        if (!resp.ok) return []; // Skip if fetch fails
+        if (!resp.ok) return []; 
         const payload = await resp.json();
         const rows = Array.isArray(payload) ? payload : payload.data || [];
         return rows
@@ -317,7 +311,6 @@ async function fetchAndRenderChartData(options = {}) {
       compareDataArray = await Promise.all(comparePromises);
     }
   } catch (e) {
-    console.error("Failed to load or parse OHLC data:", e);
     chartContainer.innerHTML = `<div class="chart-error">Could not load chart data: ${e.message}</div>`;
     return;
   }
@@ -524,7 +517,6 @@ function switchChartType(type, mainData, compareDataArray = []) {
       break;
 
     default:
-      console.error("Chart type not recognized:", lowerCaseType);
       return;
   }
 
@@ -726,7 +718,9 @@ function autoSelectFirstEnabled(select) {
 }
 
 function applyAxisConfig(data) {
-  if (!data || data.length < 2) return;
+  if (!data || data.length < 2) {
+    return;
+  }
 
   const first = new Date(data[0].time * 1000);
   const last = new Date(data[data.length - 1].time * 1000);
@@ -739,32 +733,50 @@ function applyAxisConfig(data) {
       scaleMargins: { top: 0.2, bottom: 0.1 },
     },
     timeScale: {
+      visible: true,  
+      fixLeftEdge: true, 
+      fixRightEdge: true,
+      timeVisible: spanDays <= 5,  
+      secondsVisible: spanDays <= 1, 
       tickMarkFormatter: (unixSeconds, tickType, locale) => {
         const d = new Date(unixSeconds * 1000);
         const day = d.getDate();
         const month = d.toLocaleString(locale, { month: "short" });
         const year = d.getFullYear();
-        const hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, "0");
+        const hours = d.getHours().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const seconds = d.getSeconds().toString().padStart(2, '0');
 
-        if (spanDays <= 1) {
-          return `${hours}:${minutes}`;
-        } else if (spanDays <= 15) {
-          return `${day} ${hours}:${minutes}`;
-        } else if (spanDays <= 90) {
-          return `${day} ${month}`;
-        } else if (spanDays <= 365) {
-          return month;
-        } else if (spanDays <= 1825) {
-          const q = Math.floor(d.getMonth() / 3) + 1;
-          return `Q${q} ${year}`;
+        if (tickType === 'major') {
+          if (spanDays <= 1) {
+            return `${hours}:${minutes}:${seconds}`;  
+          } else if (spanDays <= 15) {
+            return `${day} ${month} ${hours}:${minutes}`;  
+          } else if (spanDays <= 90) {
+            return `${day} ${month} ${year}`;  
+          } else if (spanDays <= 365) {
+            return `${month} ${year}`; 
+          } else if (spanDays <= 1825) {
+            const q = Math.floor(d.getMonth() / 3) + 1;
+            return `Q${q} ${year}`;  
+          } else {
+            return String(year);  
+          }
         } else {
-          return String(year);
+         
+          if (spanDays <= 1) {
+            return `${hours}:${minutes}`;  
+          } else if (spanDays <= 15) {
+            return `${day}`;  
+          } else {
+            return `${month}`; 
+          }
         }
       },
     },
   });
 }
+
 
 async function deleteCacheHistory() {
   if (
@@ -788,7 +800,6 @@ async function deleteCacheHistory() {
       throw new Error(result.message || "An unknown error occurred.");
     }
   } catch (error) {
-    console.error("Error deleting cache:", error);
     alert("Failed to delete cache: " + error.message);
   }
 }
@@ -798,12 +809,7 @@ function toggleCompareInputs(chartType) {
     "#toolbarLeft .comparison-tickers-container"
   );
 
-  if (!compareContainer) {
-    console.warn(
-      "Comparison container not found. Ensure the HTML has .comparison-tickers-container."
-    );
-    return;
-  }
+ 
 
   const lowerCaseType = chartType.toLowerCase();
 
@@ -850,7 +856,6 @@ function openRenkoSettingsModal() {
   const modal = document.getElementById("renkoSettingsModal");
   modal.style.display = "flex";
 
-  // Pre-fill form with current settings
   document.querySelector(
     `input[name="renkoType"][value="${renkoSettings.type}"]`
   ).checked = true;
@@ -860,7 +865,7 @@ function openRenkoSettingsModal() {
   document.getElementById("percentageValue").value =
     renkoSettings.percentageValue;
 
-  toggleRenkoFields(renkoSettings.type); // Show correct fields
+  toggleRenkoFields(renkoSettings.type); 
 }
 
 function closeRenkoSettingsModal() {
@@ -902,9 +907,6 @@ function saveRenkoSettings() {
 function computeRenko(ohlcData) {
   const renkoData = [];
   if (ohlcData.length === 0) return renkoData;
-
-  console.log("Computing Renko with settings:", renkoSettings);
-  console.log("Computing Renko with settings:", ohlcData);
   let brickSize;
   if (renkoSettings.type === 'fixed') {
     brickSize = renkoSettings.fixedBrickSize;
@@ -915,21 +917,20 @@ function computeRenko(ohlcData) {
   }
 
   if (brickSize <= 0) {
-    console.error('Invalid brick size');
-    return renkoData;  // Prevent division by zero or negative
+    return renkoData;  
   }
 
   let lastPrice = ohlcData[0].close;
-  let direction = 0; // 1 for up, -1 for down
+  let direction = 0; 
 
   ohlcData.forEach((bar) => {
     const diff = bar.close - lastPrice;
-    let bricks = Math.floor(Math.abs(diff) / brickSize);  // Changed to 'let'
+    let bricks = Math.floor(Math.abs(diff) / brickSize);
 
     if (bricks > 0) {
       const brickDirection = diff > 0 ? 1 : -1;
       if (brickDirection !== direction && direction !== 0) {
-        // Reversal: add one brick in opposite direction
+
         renkoData.push({
           time: bar.time,
           open: lastPrice,
@@ -937,8 +938,8 @@ function computeRenko(ohlcData) {
           low: lastPrice,
           close: lastPrice + brickSize * brickDirection,
         });
-        lastPrice += brickSize * brickDirection;
-        bricks--;  // Now safe to modify
+        lastPrice += brickSize * brickDirec
+        bricks--;  
       }
 
       for (let i = 0; i < bricks; i++) {
@@ -962,7 +963,6 @@ function computeRenko(ohlcData) {
 
 function calculateATR(data, period) {
   if (!data || data.length < period) {
-    console.warn('Insufficient data or invalid period for ATR calculation:', data?.length, period);
     return 0; 
   }
 
@@ -987,7 +987,6 @@ function calculateATR(data, period) {
   }
 
   if (!isFinite(atr)) {
-    console.warn('ATR calculation produced invalid value:', atr);
     return 1; 
   }
 

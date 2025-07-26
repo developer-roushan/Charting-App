@@ -24,13 +24,10 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
 
   try {
     const cachedData = await fs.readFile(filePath, 'utf-8');
-    console.log(`✅ [CACHE HIT] Serving data from ${filename}`);
     return JSON.parse(cachedData);
   } catch (error) {
     if (error.code !== 'ENOENT') {
-      console.error(`[CACHE READ ERROR] Could not read cache file ${filename}:`, error);
     }
-    console.log(`❌ [CACHE MISS] File not found: ${filename}. Fetching from API.`);
   }
 
   const params = new URLSearchParams({
@@ -48,13 +45,11 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   }
 
   const url = `${baseUrl}intraday/${encodeURIComponent(symbol)}?${params.toString()}`;
-  console.log('→ [API CALL] GET', url);
 
   let resp;
   try {
     resp = await axios.get(url);
   } catch (err) {
-    console.error('Error fetching OHLC from API:', err.message);
     throw err;
   }
 
@@ -69,9 +64,7 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   if (data.length > 0) {
     try {
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-      console.log(`💾 [CACHE WRITE] Successfully cached data to ${filename}`);
     } catch (writeError) {
-      console.error(`[CACHE WRITE ERROR] Failed to write cache file ${filename}:`, writeError);
     }
   }
 
@@ -139,7 +132,6 @@ exports.changePassword = async (oldPass, newPass) => {
       await fs.writeFile(envPath, `PASSWORD=${newPass}\n`, 'utf-8');
       return true;
     }
-    console.error("Error updating .env file:", error);
     return false;
   }
 };
@@ -148,10 +140,8 @@ exports.clearCacheFiles = async () => {
   try {
     await fs.rm(cacheDir, { recursive: true, force: true });
     await fs.mkdir(cacheDir, { recursive: true });
-    console.log('🗑️ Cache directory has been cleared.');
     return { success: true, message: 'Successfully cleared all cached history.' };
   } catch (error) {
-    console.error("Error clearing cache directory:", error);
     throw new Error('Failed to clear cache files due to a server error.');
   }
 };

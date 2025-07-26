@@ -95,13 +95,13 @@ a, a:visited, a:active,a:hover {
 
 .comparison-tickers-container {
   display: flex;
-  gap: 1.5rem; /* Space between inputs */
-  flex-wrap: wrap; /* Allows wrapping on small screens */
+  gap: 1.5rem; 
+  flex-wrap: wrap; 
 }
 
 .form-group {
-  flex: 1; /* Each input takes equal space */
-  min-width: 250px; /* Prevents inputs from being too narrow */
+  flex: 1; 
+  min-width: 250px;
 }
 .ticker-autocomplete input {
   width: 100%;
@@ -131,18 +131,16 @@ a, a:visited, a:active,a:hover {
 .ticker-list li:hover {
   background-color: #f0f0f0;
 }
-/* Add to style.css */
 .form-group label {
   font-weight: bold;
-  color: #333; /* Dark text for readability */
+  color: #333; 
 }
 
 .ticker-autocomplete input:focus {
-  border-color: #2196f3; /* Blue focus border to match main theme */
+  border-color: #2196f3; 
   outline: none;
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2); /* Subtle glow */
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
-/* Modal Styles */
 .modal {
   position: fixed;
   z-index: 100;
@@ -150,7 +148,7 @@ a, a:visited, a:active,a:hover {
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+  background-color: rgba(0, 0, 0, 0.5); 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -182,7 +180,7 @@ a, a:visited, a:active,a:hover {
 }
 
 #renkoSettingsForm button {
-  background-color: #2196f3; /* Blue to match your theme */
+  background-color: #2196f3; 
   color: white;
   padding: 10px;
   border: none;
@@ -458,7 +456,7 @@ input.disabled {
 .headlines-header {
   position: relative;
   text-align: left;
-  padding-right: 56px; /* space for icon */
+  padding-right: 56px;
   min-width: 180px;
 }
 
@@ -507,7 +505,6 @@ input.disabled {
   transition: all 0.22s;
 }
 
-/* SIDE PANEL GRID */
 .side-panel.card {
   flex: 3;
   min-width: 290px;
@@ -545,7 +542,6 @@ input.disabled {
   min-height: 32px;
 }
 
-/* NEWS TABLE */
 .news-table.card {
   background: #fff;
   border-radius: 14px;
@@ -591,7 +587,6 @@ select.input-error-border {
 }
 
 
-/* RESPONSIVE - TABLET */
 @media (max-width: 1100px) {
   .news-controls-bar {
     padding: 16px 8vw 12px 8vw;
@@ -653,7 +648,6 @@ select.input-error-border {
   }
 }
 
-/* RESPONSIVE - MOBILE */
 @media (max-width: 600px) {
   .news-controls-bar {
     padding: 8px 2vw 4px 2vw;
@@ -719,7 +713,7 @@ select.input-error-border {
   .modal-actions { flex-direction: column; gap: 8px; }
   .modal-btn { width: 100%; }
   .comparison-tickers-container {
-    flex-direction: column; /* Stack vertically on small screens */
+    flex-direction: column; 
     gap: 1rem;
   }
 }
