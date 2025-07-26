@@ -10,6 +10,8 @@ let renkoSettings = {
   atrPeriod: 14,
   percentageValue: 1,
 };
+let allNewsData = []; 
+let isNewsExpanded = false;
 document.addEventListener("DOMContentLoaded", init);
 chartContainer = document.getElementById("chartDiv");
 
@@ -20,7 +22,6 @@ async function init() {
   chartExpandSrink();
   newsExpandSrink();
 }
-
 function setMaxDateTime() {
   const now = new Date();
 
@@ -31,11 +32,13 @@ function setMaxDateTime() {
   const minutes = String(now.getMinutes()).padStart(2, "0");
 
   const maxDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-
+  const maxDate = `${year}-${month}-${day}`;
   document.getElementById("dateFrom").max = maxDateTime;
   document.getElementById("dateTo").max = maxDateTime;
-}
+    document.getElementById('newsEndDate').max = maxDate;
+      document.getElementById('newsStartDate').max = maxDate;
 
+}
 function setupChart() {
   if (window.chart) {
     window.chart.remove();
@@ -91,7 +94,7 @@ function setupTicker() {
       inputId: "ticker",
       listId: "ticker-list",
       codeId: "ticker-code",
-      defaultValue: "AAPL.US",
+      defaultValue: "AAPL",
     },
     {
       inputId: "compare-ticker-1",
@@ -179,7 +182,6 @@ function setupTicker() {
 
   inputs.forEach(setupSingleInput);
 }
-
 function newsExpandSrink() {
   const newsCard = document.getElementById("newsCard");
   const expandNewsBtn = document.getElementById("expandNewsBtn");
@@ -187,14 +189,17 @@ function newsExpandSrink() {
 
   expandNewsBtn.addEventListener("click", function () {
     newsCard.classList.toggle("news-expanded");
-    if (newsCard.classList.contains("news-expanded")) {
+    isNewsExpanded = !isNewsExpanded;
+    
+    if (isNewsExpanded) {
       newsExpandIcon.textContent = "fullscreen_exit";
+      displayNews(allNewsData); // Show all news
     } else {
       newsExpandIcon.textContent = "fullscreen";
+      displayNews(allNewsData.slice(0, 7)); // Show only 7 news
     }
   });
 }
-
 function chartExpandSrink() {
   const originalChartHeight = 440;
   let originalChartWidth = null;
@@ -220,7 +225,6 @@ function chartExpandSrink() {
       }
     });
 }
-
 async function fetchAndRenderChartData(options = {}) {
   const {
     symbol,
@@ -355,12 +359,10 @@ const buildUrl = (sym) => {
     setTimeout(() => setupChart(), 100);
   }
 }
-
 function isTradingDay(d) {
   const wd = d.getDay();
   return wd >= 1 && wd <= 5;
 }
-
 function getStaticSlots(spanDays) {
   if (spanDays <= 5) {
     return [
@@ -416,15 +418,12 @@ function getStaticSlots(spanDays) {
     return [{ h: 19, m: 0 }];
   }
 }
-
 function switchChartType(type, mainData, compareDataArray = []) {
-  // Clear existing main series
   if (series) {
     chart.removeSeries(series);
     series = null;
   }
 
-  // Clear existing comparison series
   if (compareSeries && compareSeries.length > 0) {
     compareSeries.forEach((cs) => chart.removeSeries(cs));
     compareSeries = [];
@@ -537,7 +536,6 @@ function switchChartType(type, mainData, compareDataArray = []) {
     });
   }
 }
-
 function validateChartForm() {
   const tickerCode = document.getElementById("ticker-code").value.trim();
   const dateFrom = document.getElementById("dateFrom").value.trim();
@@ -586,7 +584,6 @@ function validateChartForm() {
   fetchAndRenderChartData(formData);
   return true;
 }
-
 function Logout() {
   deleteCacheHistory();
   fetch("/logout", {
@@ -600,20 +597,17 @@ function Logout() {
       window.location.href = "/";
     });
 }
-
 function openChangePasswordModal() {
   document.getElementById("changePasswordModal").style.display = "flex";
   document.body.style.overflow = "hidden";
   clearPasswordForm();
   setTimeout(() => document.getElementById("oldPassword").focus(), 80);
 }
-
 function closeChangePasswordModal() {
   document.getElementById("changePasswordModal").style.display = "none";
   document.body.style.overflow = "";
   clearPasswordForm();
 }
-
 function clearPasswordForm() {
   ["oldPassword", "newPassword", "confirmPassword"].forEach((id) => {
     document.getElementById(id).value = "";
@@ -621,7 +615,6 @@ function clearPasswordForm() {
     document.getElementById(id).classList.remove("input-error-border");
   });
 }
-
 async function submitChangePassword() {
   updateEnvKey("PASSWORD", "value");
   let valid = true;
@@ -671,7 +664,6 @@ async function submitChangePassword() {
   alert("Password changed successfully! (demo, no real change)");
   return false;
 }
-
 function updateInterval() {
   const dateFrom = document.getElementById("dateFrom").value;
   const dateTo = document.getElementById("dateTo").value;
@@ -707,7 +699,6 @@ function updateInterval() {
     });
   }
 }
-
 function autoSelectFirstEnabled(select) {
   for (let i = 0; i < select.options.length; i++) {
     if (!select.options[i].disabled) {
@@ -716,7 +707,6 @@ function autoSelectFirstEnabled(select) {
     }
   }
 }
-
 function applyAxisConfig(data) {
   if (!data || data.length < 2) {
     return;
@@ -776,8 +766,6 @@ function applyAxisConfig(data) {
     },
   });
 }
-
-
 async function deleteCacheHistory() {
   if (
     !confirm(
@@ -803,7 +791,6 @@ async function deleteCacheHistory() {
     alert("Failed to delete cache: " + error.message);
   }
 }
-
 function toggleCompareInputs(chartType) {
   const compareContainer = document.querySelector(
     "#toolbarLeft .comparison-tickers-container"
@@ -819,7 +806,6 @@ function toggleCompareInputs(chartType) {
     compareContainer.style.display = "none";
   }
 }
-
 function computeHeikinAshi(ohlcData) {
   if (ohlcData.length === 0) return haData;
   let haData = [];
@@ -851,7 +837,6 @@ function computeHeikinAshi(ohlcData) {
 
   return haData;
 }
-
 function openRenkoSettingsModal() {
   const modal = document.getElementById("renkoSettingsModal");
   modal.style.display = "flex";
@@ -867,11 +852,9 @@ function openRenkoSettingsModal() {
 
   toggleRenkoFields(renkoSettings.type); 
 }
-
 function closeRenkoSettingsModal() {
   document.getElementById("renkoSettingsModal").style.display = "none";
 }
-
 function toggleRenkoFields(selectedType) {
   document.getElementById("fixedSettings").style.display =
     selectedType === "fixed" ? "block" : "none";
@@ -880,7 +863,6 @@ function toggleRenkoFields(selectedType) {
   document.getElementById("percentageSettings").style.display =
     selectedType === "percentage" ? "block" : "none";
 }
-
 function saveRenkoSettings() {
   const selectedType = document.querySelector(
     'input[name="renkoType"]:checked'
@@ -960,7 +942,6 @@ function computeRenko(ohlcData) {
 
   return renkoData;
 }
-
 function calculateATR(data, period) {
   if (!data || data.length < period) {
     return 0; 
@@ -992,5 +973,57 @@ function calculateATR(data, period) {
 
   return atr;
 }
+function generateNews() {
+  const newsStartDate = document.getElementById('newsStartDate').value;
+  const newsEndDate = document.getElementById('newsEndDate').value;
+  const tickers = [document.getElementById('ticker-code').value, document.getElementById('compare-ticker-code-1').value, document.getElementById('compare-ticker-code-2').value].filter(Boolean);
+
+  if (tickers.length === 0 || !newsStartDate || !newsEndDate) {
+    alert('Please select tickers and dates.');
+    return;
+  }
+    const container = document.getElementById('newsHeadlines');
+  container.innerHTML = '';
+
+
+
+  const url = `${baseUrl}news?tickers=${tickers.join(',')}&from=${newsStartDate}&to=${newsEndDate}`;
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(news => {
+      if (news.length === 0) {
+        alert('No news found for the selected criteria.');
+        return;
+      }
+      allNewsData = news; 
+      isNewsExpanded = false; 
+      displayNews(news.slice(0, 7)); 
+      document.getElementById('newsCard').style.display = 'block';    
+      document.getElementById('newsExpandIcon').textContent = 'fullscreen';
+      document.getElementById('newsCard').classList.remove('news-expanded');
+    })
+    .catch(error => console.error('Error fetching news:', error));
+}
+function displayNews(newsItems) {
+  console.log('Displaying news:', newsItems);
+  const container = document.getElementById('newsHeadlines');
+  container.innerHTML = '';
+  newsItems.forEach(item => {
+    const row = document.createElement('tr');
+    const dateOnly = new Date(item.date).toLocaleDateString();
+    row.innerHTML = `
+      <td>${dateOnly} - (${item.symbol})</td>
+      <td>${item.publication}</td>
+      <td><a href="${item.link}" target="_blank">${item.headline}</a></td>
+    `;
+    container.appendChild(row);
+  });
+}
+
+
 
 

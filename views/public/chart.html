@@ -205,6 +205,7 @@
               type="button"
               id="generateNewsBtn"
               class="news-generate-btn"
+              onclick="generateNews();"
             >
               Generate
             </button>
@@ -221,10 +222,10 @@
           </colgroup>
           <thead>
             <tr>
-              <th>Date of Publication</th>
-              <th>News Outlet</th>
+              <th>Date - (Symbol)</th>
+              <th>Publication</th>
               <th class="headlines-header">
-                Headlines & Info
+                Headlines
                 <button
                   id="expandNewsBtn"
                   class="expand-btn news-expand-btn"
@@ -237,18 +238,11 @@
               </th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>2025-07-09</td>
-              <td>Example News</td>
-              <td>Sample news headline here</td>
-            </tr>
-          </tbody>
+          <tbody id="newsHeadlines"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Change Password Modal -->
     <div id="changePasswordModal" class="modal-overlay" style="display: none">
       <div class="modal-dialog">
         <form

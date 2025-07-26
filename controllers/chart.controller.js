@@ -36,3 +36,12 @@ exports.clearCache = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+exports.getNews = async (req, res) => {
+  const { tickers, from, to } = req.query;
+  try {
+    const news = await chartService.fetchNews(tickers.split(','), from, to);
+    res.json(news);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch news' });
+  }
+};

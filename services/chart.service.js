@@ -145,3 +145,59 @@ exports.clearCacheFiles = async () => {
     throw new Error('Failed to clear cache files due to a server error.');
   }
 };
+exports.fetchNews = async (tickers, from, to) => {
+  const publicationDomains = {
+    'Market Watch': ['marketwatch.com'],
+    'Bloom Berg': ['bloomberg.com'],
+    'Reuters': ['reuters.com'], 
+    'Financial Times': ['ft.com', 'financialtimes.com'],
+    'WSJ': ['wsj.com', 'dowjones.com'],
+    'Yahoo Finance': ['finance.yahoo.com']
+  };
+
+  const identifyPublication = (link) => {
+    const linkLower = link.toLowerCase();
+    for (const [pub, domains] of Object.entries(publicationDomains)) {
+      for (const domain of domains) {
+        if (linkLower.includes(domain)) {
+          return pub;
+        }
+      }
+    }
+    return null;
+  };
+
+  let allNews = [];
+
+  for (const ticker of tickers) {
+    try {
+      const url = `${baseUrl}news?s=${ticker}&from=${from}&to=${to}&limit=100&api_token=${apiKey}&fmt=json`;
+      const response = await axios.get(url);
+      
+      if (response.data && Array.isArray(response.data)) {
+        const filteredForTicker = response.data
+          .map(item => {
+            const publication = identifyPublication(item.link || '');
+            return publication ? {
+              date: item.date,
+              publication: publication,
+              headline: item.title,
+              link: item.link,
+              symbol: ticker
+            } : null;
+          })
+          .filter(item => item !== null);
+        
+        allNews = allNews.concat(filteredForTicker);
+      }
+    } catch (error) {
+      console.error(`Error fetching news for ${ticker}:`, error.message);
+    }
+  }
+
+  allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  return allNews;
+};
+
+
