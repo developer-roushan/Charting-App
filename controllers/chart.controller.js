@@ -45,3 +45,13 @@ exports.getNews = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch news' });
   }
 };
+
+exports.getRTAT = async (req, res) => {
+  const { tickers, from, to } = req.query;
+  try {
+    const averages = await chartService.fetchRTAT(tickers.split(','), from, to);
+    res.json(averages);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch RTAT averages' });
+  }
+};

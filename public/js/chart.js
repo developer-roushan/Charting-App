@@ -4,14 +4,18 @@ let isLoadingMore = false;
 let chart, chartContainer, series, volumeSeries;
 let baseUrl = "/api/chart/";
 let compareSeries = [];
+let allNewsData = []; 
+let isNewsExpanded = false;
+let RTATData = [];
+let mainData = [];
+let compareDataArray = [];
 let renkoSettings = {
   type: "fixed",
   fixedBrickSize: 1.0,
   atrPeriod: 14,
   percentageValue: 1,
 };
-let allNewsData = []; 
-let isNewsExpanded = false;
+
 document.addEventListener("DOMContentLoaded", init);
 chartContainer = document.getElementById("chartDiv");
 
@@ -264,8 +268,6 @@ const buildUrl = (sym) => {
 };
 
 
-  let mainData = [];
-  let compareDataArray = [];
 
   try {
     const mainResp = await fetch(buildUrl(symbol).toString());
@@ -358,6 +360,8 @@ const buildUrl = (sym) => {
       '<div class="chart-error">No data available for the selected static intervals.</div>';
     setTimeout(() => setupChart(), 100);
   }
+  RTATData = generateRTAT();
+  setupRTATTooltip();
 }
 function isTradingDay(d) {
   const wd = d.getDay();
@@ -1023,6 +1027,28 @@ function displayNews(newsItems) {
     container.appendChild(row);
   });
 }
+async function generateRTAT() {
+  const fromDate = document.getElementById('dateFrom').value;
+  const toDate = document.getElementById('dateTo').value;
+  const tickers = [document.getElementById('ticker-code').value, document.getElementById('compare-ticker-code-1').value, document.getElementById('compare-ticker-code-2').value].filter(Boolean);
+
+  if (tickers.length === 0 || !fromDate || !toDate) {
+    alert('Please select tickers and dates.');
+    return;
+  }
+
+  const url = `${baseUrl}rtat?tickers=${tickers.join(',')}&from=${fromDate}&to=${toDate}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const averages = await response.json();
+    console.log('RTAT Averages:', averages); 
+  } catch (error) {
+    console.error('Error fetching RTAT:', error);
+  }
+}
+
 
 
 

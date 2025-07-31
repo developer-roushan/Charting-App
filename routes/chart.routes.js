@@ -7,5 +7,6 @@ router.get('/ticker', chartController.getTicker);
 router.get('/changePassword', chartController.changePassword);
 router.delete('/cache', chartController.clearCache);
 router.get('/news', chartController.getNews);
+router.get('/rtat', chartController.getRTAT);
 
 module.exports = router;
