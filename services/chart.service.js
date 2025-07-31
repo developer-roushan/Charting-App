@@ -204,7 +204,6 @@ exports.fetchNews = async (tickers, from, to) => {
         allNews = allNews.concat(filteredForTicker);
       }
     } catch (error) {
-      console.error(`Error fetching news for ${ticker}:`, error.message);
     }
   }
 
@@ -220,7 +219,6 @@ exports.fetchRTAT = async (tickers, from, to) => {
       const url = `https://data.nasdaq.com/api/v3/datatables/NDAQ/RTAT?ticker=${ticker}&date.gte=${from}&date.lte=${to}&qopts.columns=date,ticker,activity,sentiment&api_key=${nasdaqApiKey}`;
       const response = await axios.get(url);
       const rows = response.data.datatable.data;
-      console.log(`Fetched RTAT for ${ticker}:`, rows.length, "rows");
 
       const perDay = rows.map(row => ({
         date: row[0],         
@@ -230,7 +228,6 @@ exports.fetchRTAT = async (tickers, from, to) => {
 
       allData[ticker] = perDay;
     } catch (error) {
-      console.error(`Error fetching RTAT for ${ticker}:`, error.message);
       allData[ticker] = []; 
     }
   }

@@ -4,7 +4,7 @@ let isLoadingMore = false;
 let chart, chartContainer, series, volumeSeries;
 let baseUrl = "/api/chart/";
 let compareSeries = [];
-let allNewsData = []; 
+let allNewsData = [];
 let isNewsExpanded = false;
 let RTATData = [];
 let mainData = [];
@@ -30,7 +30,7 @@ function setMaxDateTime() {
   const now = new Date();
 
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0"); 
+  const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
@@ -39,9 +39,8 @@ function setMaxDateTime() {
   const maxDate = `${year}-${month}-${day}`;
   document.getElementById("dateFrom").max = maxDateTime;
   document.getElementById("dateTo").max = maxDateTime;
-    document.getElementById('newsEndDate').max = maxDate;
-      document.getElementById('newsStartDate').max = maxDate;
-
+  document.getElementById("newsEndDate").max = maxDate;
+  document.getElementById("newsStartDate").max = maxDate;
 }
 function setupChart() {
   if (window.chart) {
@@ -55,8 +54,8 @@ function setupChart() {
     },
     width: chartContainer.clientWidth,
     height: chartContainer.clientHeight,
-        handleScale: false,
-            handleScroll: false,
+    handleScale: false,
+    handleScroll: false,
   });
 
   window.addEventListener(
@@ -91,7 +90,7 @@ function setupTicker() {
     chartTypeSelect.addEventListener("change", (e) => {
       toggleCompareInputs(e.target.value);
     });
-  } 
+  }
 
   const inputs = [
     {
@@ -127,9 +126,7 @@ function setupTicker() {
         name: stock.Name || stock.name,
       }));
     })
-    .catch((err) => {     
-     
-    });
+    .catch((err) => {});
 
   function setupSingleInput(config) {
     const tickerInput = document.getElementById(config.inputId);
@@ -137,7 +134,7 @@ function setupTicker() {
     const tickerCodeInput = document.getElementById(config.codeId);
 
     if (config.defaultValue) {
-      tickerInput.value = config.defaultValue.split(".")[0]; 
+      tickerInput.value = config.defaultValue.split(".")[0];
       tickerCodeInput.value = config.defaultValue;
     }
 
@@ -194,13 +191,13 @@ function newsExpandSrink() {
   expandNewsBtn.addEventListener("click", function () {
     newsCard.classList.toggle("news-expanded");
     isNewsExpanded = !isNewsExpanded;
-    
+
     if (isNewsExpanded) {
       newsExpandIcon.textContent = "fullscreen_exit";
-      displayNews(allNewsData); // Show all news
+      displayNews(allNewsData); 
     } else {
       newsExpandIcon.textContent = "fullscreen";
-      displayNews(allNewsData.slice(0, 7)); // Show only 7 news
+      displayNews(allNewsData.slice(0, 7)); 
     }
   });
 }
@@ -254,20 +251,18 @@ async function fetchAndRenderChartData(options = {}) {
     endDate.setHours(23, 59, 59, 999);
   }
 
-const buildUrl = (sym) => {
-  const url = new URL('ohlc', window.location.origin + baseUrl);
-  url.searchParams.set('symbol', sym);
-  url.searchParams.set('from', startDate.toISOString());
-  url.searchParams.set('to', endDate.toISOString());
+  const buildUrl = (sym) => {
+    const url = new URL("ohlc", window.location.origin + baseUrl);
+    url.searchParams.set("symbol", sym);
+    url.searchParams.set("from", startDate.toISOString());
+    url.searchParams.set("to", endDate.toISOString());
 
-  if (!isStatic) {
-    url.searchParams.set('interval', interval); 
-  }
+    if (!isStatic) {
+      url.searchParams.set("interval", interval);
+    }
 
-  return url;
-};
-
-
+    return url;
+  };
 
   try {
     const mainResp = await fetch(buildUrl(symbol).toString());
@@ -299,7 +294,7 @@ const buildUrl = (sym) => {
     ) {
       const comparePromises = compareSymbols.map(async (sym) => {
         const resp = await fetch(buildUrl(sym).toString());
-        if (!resp.ok) return []; 
+        if (!resp.ok) return [];
         const payload = await resp.json();
         const rows = Array.isArray(payload) ? payload : payload.data || [];
         return rows
@@ -343,8 +338,8 @@ const buildUrl = (sym) => {
   if (chartType.toLowerCase() === "heikin") {
     finalData = computeHeikinAshi(finalData);
   }
-  if (chartType.toLowerCase() === 'renko') {
-  finalData = computeRenko(finalData);
+  if (chartType.toLowerCase() === "renko") {
+    finalData = computeRenko(finalData);
   }
 
   ohlcData = finalData;
@@ -360,8 +355,27 @@ const buildUrl = (sym) => {
       '<div class="chart-error">No data available for the selected static intervals.</div>';
     setTimeout(() => setupChart(), 100);
   }
-  RTATData = generateRTAT();
-  setupRTATTooltip();
+  RTATData = await generateRTAT();
+  const dataPerTicker = {
+    [symbol]: { ohlcData: finalData, rtatData: RTATData[symbol] || [] },
+  };
+
+  if (compareSymbols.length > 0 && compareDataArray) {
+    compareSymbols.forEach((sym, i) => {
+      dataPerTicker[sym] = {
+        ohlcData: compareDataArray[i],
+        rtatData: RTATData[sym] || [],
+      };
+    });
+  }
+
+  const summaryData = {};
+  for (const ticker in dataPerTicker) {
+    const { ohlcData, rtatData } = dataPerTicker[ticker];
+    summaryData[ticker] = calculateSummary(ohlcData, rtatData);
+  }
+
+  injectSummaryBoxes(summaryData, symbol, compareSymbols);
 }
 function isTradingDay(d) {
   const wd = d.getDay();
@@ -441,11 +455,9 @@ function switchChartType(type, mainData, compareDataArray = []) {
   const candleData = mainData;
   const lineData = mainData.map((d) => ({ time: d.time, value: d.close }));
 
-  // Static colors
-  const mainColor = "#ADD8E6"; // Light blue
-  const compareColors = ["#90EE90", "#FFDAB9"]; // Light green, light orange
+  const mainColor = "#ADD8E6"; 
+  const compareColors = ["#90EE90", "#FFDAB9"]; 
 
-  // Helper function to create a series of the matching type
   const createSeries = (color, seriesData) => {
     if (lowerCaseType === "area") {
       const s = chart.addAreaSeries({
@@ -464,30 +476,29 @@ function switchChartType(type, mainData, compareDataArray = []) {
       s.setData(seriesData);
       return s;
     }
-    return null; // No series for non-matching types
+    return null; 
   };
 
-  // Render main series
   switch (lowerCaseType) {
     case "renko":
       series = chart.addCandlestickSeries({
-        upColor: "#00ff00", // Green for up bricks
-        downColor: "#ff0000", // Red for down bricks
+        upColor: "#00ff00", 
+        downColor: "#ff0000", 
         borderVisible: false,
-        wickVisible: false, // No wicks for Renko
+        wickVisible: false, o
       });
-      series.setData(candleData); // Use computed Renko data
+      series.setData(candleData); 
       break;
 
     case "heikin":
       series = chart.addCandlestickSeries({
-        upColor: "#00ff00", // Green for up candles
-        downColor: "#ff0000", // Red for down candles
+        upColor: "#00ff00", 
+        downColor: "#ff0000", 
         borderVisible: false,
         wickUpColor: "#00ff00",
         wickDownColor: "#ff0000",
       });
-      series.setData(candleData); // Use computed Heikin Ashi data
+      series.setData(candleData); 
       break;
 
     case "area":
@@ -523,7 +534,6 @@ function switchChartType(type, mainData, compareDataArray = []) {
       return;
   }
 
-  // Render comparison series only for line or area
   if (lowerCaseType === "line" || lowerCaseType === "area") {
     compareDataArray.forEach((compareData, index) => {
       if (compareData && compareData.length > 0) {
@@ -727,43 +737,42 @@ function applyAxisConfig(data) {
       scaleMargins: { top: 0.2, bottom: 0.1 },
     },
     timeScale: {
-      visible: true,  
-      fixLeftEdge: true, 
+      visible: true,
+      fixLeftEdge: true,
       fixRightEdge: true,
-      timeVisible: spanDays <= 5,  
-      secondsVisible: spanDays <= 1, 
+      timeVisible: spanDays <= 5,
+      secondsVisible: spanDays <= 1,
       tickMarkFormatter: (unixSeconds, tickType, locale) => {
         const d = new Date(unixSeconds * 1000);
         const day = d.getDate();
         const month = d.toLocaleString(locale, { month: "short" });
         const year = d.getFullYear();
-        const hours = d.getHours().toString().padStart(2, '0');
-        const minutes = d.getMinutes().toString().padStart(2, '0');
-        const seconds = d.getSeconds().toString().padStart(2, '0');
+        const hours = d.getHours().toString().padStart(2, "0");
+        const minutes = d.getMinutes().toString().padStart(2, "0");
+        const seconds = d.getSeconds().toString().padStart(2, "0");
 
-        if (tickType === 'major') {
+        if (tickType === "major") {
           if (spanDays <= 1) {
-            return `${hours}:${minutes}:${seconds}`;  
+            return `${hours}:${minutes}:${seconds}`;
           } else if (spanDays <= 15) {
-            return `${day} ${month} ${hours}:${minutes}`;  
+            return `${day} ${month} ${hours}:${minutes}`;
           } else if (spanDays <= 90) {
-            return `${day} ${month} ${year}`;  
+            return `${day} ${month} ${year}`;
           } else if (spanDays <= 365) {
-            return `${month} ${year}`; 
+            return `${month} ${year}`;
           } else if (spanDays <= 1825) {
             const q = Math.floor(d.getMonth() / 3) + 1;
-            return `Q${q} ${year}`;  
+            return `Q${q} ${year}`;
           } else {
-            return String(year);  
+            return String(year);
           }
         } else {
-         
           if (spanDays <= 1) {
-            return `${hours}:${minutes}`;  
+            return `${hours}:${minutes}`;
           } else if (spanDays <= 15) {
-            return `${day}`;  
+            return `${day}`;
           } else {
-            return `${month}`; 
+            return `${month}`;
           }
         }
       },
@@ -799,8 +808,6 @@ function toggleCompareInputs(chartType) {
   const compareContainer = document.querySelector(
     "#toolbarLeft .comparison-tickers-container"
   );
-
- 
 
   const lowerCaseType = chartType.toLowerCase();
 
@@ -854,7 +861,7 @@ function openRenkoSettingsModal() {
   document.getElementById("percentageValue").value =
     renkoSettings.percentageValue;
 
-  toggleRenkoFields(renkoSettings.type); 
+  toggleRenkoFields(renkoSettings.type);
 }
 function closeRenkoSettingsModal() {
   document.getElementById("renkoSettingsModal").style.display = "none";
@@ -894,20 +901,20 @@ function computeRenko(ohlcData) {
   const renkoData = [];
   if (ohlcData.length === 0) return renkoData;
   let brickSize;
-  if (renkoSettings.type === 'fixed') {
+  if (renkoSettings.type === "fixed") {
     brickSize = renkoSettings.fixedBrickSize;
-  } else if (renkoSettings.type === 'atr') {
+  } else if (renkoSettings.type === "atr") {
     brickSize = calculateATR(ohlcData, renkoSettings.atrPeriod);
-  } else if (renkoSettings.type === 'percentage') {
+  } else if (renkoSettings.type === "percentage") {
     brickSize = (ohlcData[0].close * renkoSettings.percentageValue) / 100;
   }
 
   if (brickSize <= 0) {
-    return renkoData;  
+    return renkoData;
   }
 
   let lastPrice = ohlcData[0].close;
-  let direction = 0; 
+  let direction = 0;
 
   ohlcData.forEach((bar) => {
     const diff = bar.close - lastPrice;
@@ -916,7 +923,6 @@ function computeRenko(ohlcData) {
     if (bricks > 0) {
       const brickDirection = diff > 0 ? 1 : -1;
       if (brickDirection !== direction && direction !== 0) {
-
         renkoData.push({
           time: bar.time,
           open: lastPrice,
@@ -924,8 +930,8 @@ function computeRenko(ohlcData) {
           low: lastPrice,
           close: lastPrice + brickSize * brickDirection,
         });
-        lastPrice += brickSize * brickDirec
-        bricks--;  
+        lastPrice += brickSize * brickDirec;
+        bricks--;
       }
 
       for (let i = 0; i < bricks; i++) {
@@ -948,7 +954,7 @@ function computeRenko(ohlcData) {
 }
 function calculateATR(data, period) {
   if (!data || data.length < period) {
-    return 0; 
+    return 0;
   }
 
   const trValues = [];
@@ -972,52 +978,55 @@ function calculateATR(data, period) {
   }
 
   if (!isFinite(atr)) {
-    return 1; 
+    return 1;
   }
 
   return atr;
 }
 function generateNews() {
-  const newsStartDate = document.getElementById('newsStartDate').value;
-  const newsEndDate = document.getElementById('newsEndDate').value;
-  const tickers = [document.getElementById('ticker-code').value, document.getElementById('compare-ticker-code-1').value, document.getElementById('compare-ticker-code-2').value].filter(Boolean);
+  const newsStartDate = document.getElementById("newsStartDate").value;
+  const newsEndDate = document.getElementById("newsEndDate").value;
+  const tickers = [
+    document.getElementById("ticker-code").value,
+    document.getElementById("compare-ticker-code-1").value,
+    document.getElementById("compare-ticker-code-2").value,
+  ].filter(Boolean);
 
   if (tickers.length === 0 || !newsStartDate || !newsEndDate) {
-    alert('Please select tickers and dates.');
+    alert("Please select tickers and dates.");
     return;
   }
-    const container = document.getElementById('newsHeadlines');
-  container.innerHTML = '';
+  const container = document.getElementById("newsHeadlines");
+  container.innerHTML = "";
 
-
-
-  const url = `${baseUrl}news?tickers=${tickers.join(',')}&from=${newsStartDate}&to=${newsEndDate}`;
+  const url = `${baseUrl}news?tickers=${tickers.join(
+    ","
+  )}&from=${newsStartDate}&to=${newsEndDate}`;
 
   fetch(url)
-    .then(response => {
+    .then((response) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
     })
-    .then(news => {
+    .then((news) => {
       if (news.length === 0) {
-        alert('No news found for the selected criteria.');
+        alert("No news found for the selected criteria.");
         return;
       }
-      allNewsData = news; 
-      isNewsExpanded = false; 
-      displayNews(news.slice(0, 7)); 
-      document.getElementById('newsCard').style.display = 'block';    
-      document.getElementById('newsExpandIcon').textContent = 'fullscreen';
-      document.getElementById('newsCard').classList.remove('news-expanded');
+      allNewsData = news;
+      isNewsExpanded = false;
+      displayNews(news.slice(0, 7));
+      document.getElementById("newsCard").style.display = "block";
+      document.getElementById("newsExpandIcon").textContent = "fullscreen";
+      document.getElementById("newsCard").classList.remove("news-expanded");
     })
-    .catch(error => console.error('Error fetching news:', error));
+    .catch((error) => console.error("Error fetching news:", error));
 }
 function displayNews(newsItems) {
-  console.log('Displaying news:', newsItems);
-  const container = document.getElementById('newsHeadlines');
-  container.innerHTML = '';
-  newsItems.forEach(item => {
-    const row = document.createElement('tr');
+  const container = document.getElementById("newsHeadlines");
+  container.innerHTML = "";
+  newsItems.forEach((item) => {
+    const row = document.createElement("tr");
     const dateOnly = new Date(item.date).toLocaleDateString();
     row.innerHTML = `
       <td>${dateOnly} - (${item.symbol})</td>
@@ -1028,28 +1037,262 @@ function displayNews(newsItems) {
   });
 }
 async function generateRTAT() {
-  const fromDate = document.getElementById('dateFrom').value;
-  const toDate = document.getElementById('dateTo').value;
-  const tickers = [document.getElementById('ticker-code').value, document.getElementById('compare-ticker-code-1').value, document.getElementById('compare-ticker-code-2').value].filter(Boolean);
+  const fromDate = document.getElementById("dateFrom").value;
+  const toDate = document.getElementById("dateTo").value;
+  const tickers = [
+    document.getElementById("ticker-code").value,
+    document.getElementById("compare-ticker-code-1").value,
+    document.getElementById("compare-ticker-code-2").value,
+  ].filter(Boolean);
 
   if (tickers.length === 0 || !fromDate || !toDate) {
-    alert('Please select tickers and dates.');
-    return;
+    alert("Please select tickers and dates.");
+    return {}; 
   }
 
-  const url = `${baseUrl}rtat?tickers=${tickers.join(',')}&from=${fromDate}&to=${toDate}`;
+  const url = `${baseUrl}rtat?tickers=${tickers.join(",")}&from=${fromDate}&to=${toDate}`;
 
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const averages = await response.json();
-    console.log('RTAT Averages:', averages); 
+    return averages; 
   } catch (error) {
-    console.error('Error fetching RTAT:', error);
+    return {}; 
   }
 }
 
 
+function renderCoreMetrics(container, ticker, data) {
+  container.innerHTML = `
+    <div class="summary-box">
+      <h4 style="margin: 0;">${ticker}</h4>
+      <div><strong>VWAP:</strong> ${data.vwap?.toFixed(2) ?? "--"}</div>
+      <div><strong>Price Range:</strong> ${
+        data.priceRange?.toFixed(2) ?? "--"
+      }</div>
+      <div><strong>Total Volume:</strong> ${
+        data.totalVolume?.toLocaleString() ?? "--"
+      }</div>
+      <div><strong>Volatility %:</strong> ${
+        data.volatility?.toFixed(2) ?? "--"
+      }%</div>
+    </div>
+  `;
+}
 
+function render4w52wMetrics(container, data) {
+  container.innerHTML = `
+    <div class="summary-box">
+      <div><strong>4W:</strong> ${
+        data.avg4W?.toFixed(2) ?? "--"
+      }</div>
+      <div><strong>52W:</strong> ${
+        data.avg52W?.toFixed(2) ?? "--"
+      }</div>
+    </div>
+  `;
+}
 
+function renderRTATMetrics(container, data) {
+  container.innerHTML = `
+    <div class="summary-box">
+      <div><strong>Opinion:</strong> ${
+        data.avgSentiment?.toFixed(2) ?? "--"
+      }</div>
+      <div><strong>Activity:</strong> ${
+        data.avgActivity?.toFixed(3) ?? "--"
+      }</div>
+    </div>
+  `;
+}
 
+function renderBiasScores(container, data) {
+  container.innerHTML = `
+    <div class="summary-box">
+      <div><strong>Score :</strong>
+      <div>04-09: ${(data.biasScore?.["04-09"] ?? 0).toFixed(2)}</div>
+      <div>09-12: ${(data.biasScore?.["09-12"] ?? 0).toFixed(2)}</div>
+      <div>12-16: ${(data.biasScore?.["12-16"] ?? 0).toFixed(2)}</div>
+      <div>16-19: ${(data.biasScore?.["16-19"] ?? 0).toFixed(2)}</div>
+    </div>
+  `;
+}
+
+function injectSummaryBoxes(dataPerTicker, mainSymbol, compareSymbols) {
+  if (dataPerTicker[mainSymbol]) {
+    renderCoreMetrics(
+      document.getElementById("mainBox-core"),
+      mainSymbol,
+      dataPerTicker[mainSymbol]
+    );
+    render4w52wMetrics(
+      document.getElementById("mainBox-4w52w"),
+      dataPerTicker[mainSymbol]
+    );
+    renderRTATMetrics(
+      document.getElementById("mainBox-rtat"),
+      dataPerTicker[mainSymbol]
+    );
+    renderBiasScores(
+      document.getElementById("mainBox-bias"),
+      dataPerTicker[mainSymbol]
+    );
+  }
+
+  if (compareSymbols[0] && dataPerTicker[compareSymbols[0]]) {
+    renderCoreMetrics(
+      document.getElementById("compareBox1-core"),
+      compareSymbols[0],
+      dataPerTicker[compareSymbols[0]]
+    );
+    render4w52wMetrics(
+      document.getElementById("compareBox1-4w52w"),
+      dataPerTicker[compareSymbols[0]]
+    );
+    renderRTATMetrics(
+      document.getElementById("compareBox1-rtat"),
+      dataPerTicker[compareSymbols[0]]
+    );
+    renderBiasScores(
+      document.getElementById("compareBox1-bias"),
+      dataPerTicker[compareSymbols[0]]
+    );
+  }
+
+  if (compareSymbols[1] && dataPerTicker[compareSymbols[1]]) {
+    renderCoreMetrics(
+      document.getElementById("compareBox2-core"),
+      compareSymbols[1],
+      dataPerTicker[compareSymbols[1]]
+    );
+    render4w52wMetrics(
+      document.getElementById("compareBox2-4w52w"),
+      dataPerTicker[compareSymbols[1]]
+    );
+    renderRTATMetrics(
+      document.getElementById("compareBox2-rtat"),
+      dataPerTicker[compareSymbols[1]]
+    );
+    renderBiasScores(
+      document.getElementById("compareBox2-bias"),
+      dataPerTicker[compareSymbols[1]]
+    );
+  }
+}
+
+function calculateSummary(ohlcData, rtatData) {
+  if (!ohlcData || ohlcData.length === 0) return {};
+
+  ohlcData.sort((a, b) => a.time - b.time);
+
+  const avgVWAP =
+    ohlcData.reduce(
+      (sum, bar) => sum + (bar.open + bar.high + bar.low + bar.close) / 4,
+      0
+    ) / ohlcData.length;
+  const avgPriceRange =
+    ohlcData.reduce((sum, bar) => sum + (bar.high - bar.low), 0) /
+    ohlcData.length;
+  const avgTotalVolume =
+    ohlcData.reduce((sum, bar) => sum + bar.volume, 0) / ohlcData.length;
+  const avgVolatility =
+    ohlcData.reduce(
+      (sum, bar) => sum + ((bar.high - bar.low) / bar.open) * 100,
+      0
+    ) / ohlcData.length;
+
+  const avg4W = (() => {
+    const slice = ohlcData.slice(-20);
+    if (slice.length === 0) return 0;
+    return slice.reduce((sum, bar) => sum + bar.close, 0) / slice.length;
+  })();
+
+  const avg52W = (() => {
+    const slice = ohlcData.slice(-260);
+    if (slice.length === 0) return 0;
+    return slice.reduce((sum, bar) => sum + bar.close, 0) / slice.length;
+  })();
+
+  const avgSentiment =
+    rtatData && rtatData.length
+      ? rtatData.reduce((sum, r) => sum + (parseFloat(r.sentiment) || 0), 0) /
+        rtatData.length
+      : 0;
+
+  const avgActivity =
+    rtatData && rtatData.length
+      ? rtatData.reduce((sum, r) => sum + (parseFloat(r.activity) || 0), 0) /
+        rtatData.length
+      : 0;
+  const biasScore = { "04-09": 0, "09-12": 0, "12-16": 0, "16-19": 0 };
+
+  if (ohlcData && ohlcData.length > 0) {
+    const dailySegmentData = {};
+
+    ohlcData.forEach((bar) => {
+      const d = new Date(bar.time * 1000);
+      const dateKey = d.toISOString().slice(0, 10); // e.g., '2025-08-01'
+      const h = d.getUTCHours();
+
+      let segmentKey = null;
+      if (h >= 4 && h < 9) segmentKey = "04-09";
+      else if (h >= 9 && h < 12) segmentKey = "09-12";
+      else if (h >= 12 && h < 16) segmentKey = "12-16";
+      else if (h >= 16 && h < 19) segmentKey = "16-19";
+
+      if (!segmentKey) return;
+
+      if (!dailySegmentData[dateKey]) {
+        dailySegmentData[dateKey] = {};
+      }
+
+      if (!dailySegmentData[dateKey][segmentKey]) {
+        dailySegmentData[dateKey][segmentKey] = {
+          open: bar.open,
+          close: bar.close,
+          volume: bar.volume,
+        };
+      } else {
+        dailySegmentData[dateKey][segmentKey].close = bar.close;
+        dailySegmentData[dateKey][segmentKey].volume += bar.volume;
+      }
+    });
+
+    const finalVolumes = {
+      "04-09": { buy: 0, sell: 0 },
+      "09-12": { buy: 0, sell: 0 },
+      "12-16": { buy: 0, sell: 0 },
+      "16-19": { buy: 0, sell: 0 },
+    };
+
+    for (const date in dailySegmentData) {
+      for (const segmentKey in dailySegmentData[date]) {
+        const segment = dailySegmentData[date][segmentKey];
+        if (segment.close > segment.open) {
+          finalVolumes[segmentKey].buy += segment.volume;
+        } else if (segment.close < segment.open) {
+          finalVolumes[segmentKey].sell += segment.volume;
+        }
+      }
+    }
+
+    for (const seg in finalVolumes) {
+      const { buy, sell } = finalVolumes[seg];
+      const total = buy + sell;
+      biasScore[seg] = total > 0 ? (buy - sell) / total : 0;
+    }
+  }
+
+  return {
+    vwap: avgVWAP,
+    priceRange: avgPriceRange,
+    totalVolume: avgTotalVolume,
+    volatility: avgVolatility,
+    avg4W,
+    avg52W,
+    avgSentiment,
+    avgActivity,
+    biasScore,
+  };
+}

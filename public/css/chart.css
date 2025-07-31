@@ -265,7 +265,7 @@ a, a:visited, a:active,a:hover {
 .dashboard-top {
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: 5px;
   width: 100%;
 }
 
@@ -276,7 +276,7 @@ a, a:visited, a:active,a:hover {
   background: #fff;
   border-radius: 22px;
   box-shadow: 0 8px 32px rgba(44,62,80,0.09);
-  padding: 36px 38px 24px 38px;
+  padding: 36px 8px 24px 8px;
   min-width: 0;
   transition: padding 0.23s;
 }
@@ -407,7 +407,7 @@ a, a:visited, a:active,a:hover {
   width: 98% !important;
   min-width: 0;
   flex: 1 1 auto;
-  height: 440px;
+  height: 500px;
   background: #f7fafe;
   border-radius: 10px;
   box-shadow: 0 1px 12px rgba(30,44,71,0.07);
@@ -512,12 +512,12 @@ input.disabled {
   background: #fff;
   border-radius: 22px;
   box-shadow: 0 8px 32px rgba(44,62,80,0.09);
-  padding: 36px 26px 28px 26px;
+  padding: 8px;
   margin: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 440px;
+  min-height: 500px;
   min-width: 220px;
   transition: all 0.2s;
 }
@@ -525,7 +525,6 @@ input.disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 28px;
   flex: 1;
 }
 .grid-row {
