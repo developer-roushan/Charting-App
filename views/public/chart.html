@@ -113,7 +113,6 @@
           <div class="chart-toolbar">
             <div class="toolbar-left" id="toolbarLeft">
               <div class="comparison-tickers-container">
-                <!-- Ticker 1 Input -->
                 <div class="form-group">
                   <label>
                     Ticker 1:
@@ -130,7 +129,6 @@
                   </label>
                 </div>
 
-                <!-- Ticker 2 Input -->
                 <div class="form-group">
                   <label>
                     Ticker 2:
@@ -148,7 +146,16 @@
                 </div>
               </div>
             </div>
-
+<div
+            id="chartInfoBox"
+            class="chart-info-box"            
+          >
+            <div id="infoTime"></div>
+            <div id="infoPrice"></div>
+            <div id="infoVolume"></div>
+            <div id="infoVWAP"></div>
+            <div id="infoRTAT"></div>
+          </div>
             <button
               id="expandChartBtn"
               class="expand-btn"
@@ -157,61 +164,34 @@
               <span id="expandIcon" class="material-icons">fullscreen</span>
             </button>
           </div>
-
-          <div id="chartDiv">
-            <div
-              id="chartTooltip"
-              style="
-                display: none;
-                position: absolute;
-                pointer-events: none;
-                background: #fff;
-                border: 1px solid #ccc;
-                padding: 8px;
-                z-index: 10;
-                min-width: 200px;
-                font-size: 13px;
-              "
-            ></div>
-          </div>
+          
+          <div id="chartDiv"></div>
         </div>
         <aside class="side-panel card">
           <div class="side-custom-grid">
             <div class="grid-row row1">
-              <div class="grid-cell" id="mainBox-core">
-              </div>
+              <div class="grid-cell" id="mainBox-core"></div>
             </div>
             <div class="grid-row row2">
-              <div class="grid-cell" id="compareBox1-core">
-              </div>
+              <div class="grid-cell" id="compareBox1-core"></div>
             </div>
             <div class="grid-row row3">
-              <div class="grid-cell" id="compareBox2-core">
-              </div>
+              <div class="grid-cell" id="compareBox2-core"></div>
             </div>
             <div class="grid-row row4">
-              <div class="grid-cell" id="mainBox-4w52w">
-              </div>
-              <div class="grid-cell" id="compareBox1-4w52w">
-              </div>
-              <div class="grid-cell" id="compareBox2-4w52w">
-              </div>
+              <div class="grid-cell" id="mainBox-4w52w"></div>
+              <div class="grid-cell" id="compareBox1-4w52w"></div>
+              <div class="grid-cell" id="compareBox2-4w52w"></div>
             </div>
             <div class="grid-row row5">
-              <div class="grid-cell" id="mainBox-rtat">
-              </div>
-              <div class="grid-cell" id="compareBox1-rtat">
-              </div>
-              <div class="grid-cell" id="compareBox2-rtat">
-              </div>
+              <div class="grid-cell" id="mainBox-rtat"></div>
+              <div class="grid-cell" id="compareBox1-rtat"></div>
+              <div class="grid-cell" id="compareBox2-rtat"></div>
             </div>
             <div class="grid-row row6">
-              <div class="grid-cell" id="mainBox-bias">
-              </div>
-              <div class="grid-cell" id="compareBox1-bias">
-              </div>
-              <div class="grid-cell" id="compareBox2-bias">
-              </div>
+              <div class="grid-cell" id="mainBox-bias"></div>
+              <div class="grid-cell" id="compareBox1-bias"></div>
+              <div class="grid-cell" id="compareBox2-bias"></div>
             </div>
           </div>
         </aside>

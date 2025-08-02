@@ -81,6 +81,56 @@ function setupChart() {
       closeRenkoSettingsModal();
     }
   };
+  chart.subscribeCrosshairMove(param => {
+  if (!isStaticAndEligibleChartType()) {
+    hideChartInfoBox();
+    return;
+  }
+  if (!param || !param.time || !param.point || param.seriesData.size === 0) {
+    hideChartInfoBox();
+    return;
+  }
+
+  const hoveredTime = param.time;
+  const mainPoint = ohlcData.find(d => d.time === hoveredTime);
+  if (!mainPoint) {
+    hideChartInfoBox();
+    return;
+  }
+  const idx = ohlcData.findIndex(d => d.time === hoveredTime);
+
+  const price = mainPoint.close.toFixed(2);
+  const volume = mainPoint.volume;
+
+  let vwap = '--';
+  if (idx >= 0) {
+    let pvSum = 0, volSum = 0;
+    for (let i = 0; i <= idx; i++) {
+      const typicalPrice = (ohlcData[i].high + ohlcData[i].low + ohlcData[i].close) / 3;
+      pvSum += typicalPrice * ohlcData[i].volume;
+      volSum += ohlcData[i].volume;
+    }
+    vwap = volSum > 0 ? (pvSum / volSum).toFixed(2) : '--';
+  }
+
+  let rtatSentiment = '--', rtatActivity = '--';
+  const symbol = document.getElementById('ticker-code').value.trim(); 
+  if (symbol && RTATData && RTATData[symbol]) {
+    const lagDateObj = new Date(mainPoint.time * 1000);
+    lagDateObj.setDate(lagDateObj.getDate() - 1);
+    const lagDateStr = lagDateObj.toISOString().slice(0, 10);
+
+    const rtatDaily = RTATData[symbol].find(r => r.date === lagDateStr);
+    if (rtatDaily) {
+      rtatSentiment = rtatDaily.sentiment ?? '--';
+      rtatActivity = rtatDaily.activity ?? '--';
+    }
+  }
+
+  const timeString = new Date(hoveredTime * 1000).toLocaleString();
+
+  showChartInfoBox({ timeString, price, volume, vwap, rtatSentiment, rtatActivity });
+});
 }
 function setupTicker() {
   const chartTypeSelect = document.getElementById("chartType");
@@ -485,7 +535,7 @@ function switchChartType(type, mainData, compareDataArray = []) {
         upColor: "#00ff00", 
         downColor: "#ff0000", 
         borderVisible: false,
-        wickVisible: false, o
+        wickVisible: false, 
       });
       series.setData(candleData); 
       break;
@@ -930,7 +980,7 @@ function computeRenko(ohlcData) {
           low: lastPrice,
           close: lastPrice + brickSize * brickDirection,
         });
-        lastPrice += brickSize * brickDirec;
+        lastPrice += brickSize * brickDirection;
         bricks--;
       }
 
@@ -1061,8 +1111,6 @@ async function generateRTAT() {
     return {}; 
   }
 }
-
-
 function renderCoreMetrics(container, ticker, data) {
   container.innerHTML = `
     <div class="summary-box">
@@ -1080,7 +1128,6 @@ function renderCoreMetrics(container, ticker, data) {
     </div>
   `;
 }
-
 function render4w52wMetrics(container, data) {
   container.innerHTML = `
     <div class="summary-box">
@@ -1093,7 +1140,6 @@ function render4w52wMetrics(container, data) {
     </div>
   `;
 }
-
 function renderRTATMetrics(container, data) {
   container.innerHTML = `
     <div class="summary-box">
@@ -1106,7 +1152,6 @@ function renderRTATMetrics(container, data) {
     </div>
   `;
 }
-
 function renderBiasScores(container, data) {
   container.innerHTML = `
     <div class="summary-box">
@@ -1118,7 +1163,6 @@ function renderBiasScores(container, data) {
     </div>
   `;
 }
-
 function injectSummaryBoxes(dataPerTicker, mainSymbol, compareSymbols) {
   if (dataPerTicker[mainSymbol]) {
     renderCoreMetrics(
@@ -1180,7 +1224,6 @@ function injectSummaryBoxes(dataPerTicker, mainSymbol, compareSymbols) {
     );
   }
 }
-
 function calculateSummary(ohlcData, rtatData) {
   if (!ohlcData || ohlcData.length === 0) return {};
 
@@ -1296,3 +1339,28 @@ function calculateSummary(ohlcData, rtatData) {
     biasScore,
   };
 }
+function isStaticAndEligibleChartType() {
+  const intervalElem = document.getElementById('interval');
+  const chartTypeElem = document.getElementById('chartType');
+  if (!intervalElem || !chartTypeElem) return false;
+  const intervalValue = intervalElem.value?.toLowerCase?.() || "";
+  const chartTypeValue = chartTypeElem.value?.toLowerCase?.() || "";
+  return (
+    intervalValue === "static"
+    && ["line", "area", "baseline"].includes(chartTypeValue)
+  );
+}
+function showChartInfoBox({ timeString, price, volume, vwap, rtatSentiment, rtatActivity }) {
+  const box = document.getElementById('chartInfoBox');
+  box.classList.add('active');
+  document.getElementById('infoTime').innerHTML = "<strong>Time:</strong> " + (timeString ?? "--");
+  document.getElementById('infoPrice').innerHTML = "<strong>Price:</strong> " + (price !== undefined ? price : "--");
+  document.getElementById('infoVolume').innerHTML = "<strong>Volume:</strong> " + (volume !== undefined ? volume.toLocaleString() : "--");
+  document.getElementById('infoVWAP').innerHTML = "<strong>VWAP:</strong> " + (vwap !== undefined ? vwap : "--");
+  document.getElementById('infoRTAT').innerHTML = `<strong>RTAT:</strong> S=${rtatSentiment ?? "--"} / A=${rtatActivity ?? "--"}`;
+}
+function hideChartInfoBox() {
+ const box = document.getElementById('chartInfoBox');
+  box.classList.remove('active');
+}
+

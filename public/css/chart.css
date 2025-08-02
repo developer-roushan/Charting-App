@@ -93,11 +93,6 @@ a, a:visited, a:active,a:hover {
   background: #e6f3ff;
 }
 
-.comparison-tickers-container {
-  display: flex;
-  gap: 1.5rem; 
-  flex-wrap: wrap; 
-}
 
 .form-group {
   flex: 1; 
@@ -248,6 +243,51 @@ a, a:visited, a:active,a:hover {
   display: block;
   position: relative;
 }
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.comparison-tickers-container {
+  display: flex;
+  gap: 8px;
+}
+.chart-info-box {
+  background: #f9f3ff;
+  border-radius: 6px;
+  border: 1px solid #dbc7fb;
+  font-size: 15px;
+  color: #21143b;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  min-width: 350px;
+  height: 34px;        
+  box-sizing: border-box;
+  transition: opacity 0.15s;
+  gap:5px;
+}
+.chart-info-box[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.chart-info-box {
+  min-width: 350px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.chart-info-box.active {
+  visibility: visible;
+  opacity: 1;
+}
+
 
 #ticker {
   width: 100%;
@@ -712,8 +752,8 @@ select.input-error-border {
   .modal-actions { flex-direction: column; gap: 8px; }
   .modal-btn { width: 100%; }
   .comparison-tickers-container {
-    flex-direction: column; 
-    gap: 1rem;
+   display: flex;
+    gap: 8px;
   }
 }
 .modal-overlay {
