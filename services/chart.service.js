@@ -2,26 +2,45 @@ require("dotenv").config();
 const axios = require("axios");
 const path = require("path");
 const fs = require("fs").promises;
+
 const nasdaqApiKey = process.env.NASDAQ_API_KEY;
 const apiKey = process.env.EODHD_API_KEY;
 const baseUrl = "https://eodhd.com/api/";
+
 const tickerFilePath = path.join(__dirname, "../data/ticker.json");
 const cacheDir = path.join(__dirname, "..", "data", "cache");
+
+async function ensureCacheDir() {
+  await fs.mkdir(cacheDir, { recursive: true });
+}
+
 
 function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const from = fromISO
     ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
     : "from_na";
-  const to = toISO
-    ? `to_${new Date(toISO).toISOString().split("T")[0]}`
-    : "to_na";
+  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
   const int = interval ? `interval_${interval}` : "interval_na";
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `${safeSymbol}_${from}_${to}_${int}.json`;
 }
 
+function generateNewsCacheFilename(tickers, fromISO, toISO) {
+  const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
+  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
+  const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
+  return `news_${safeTickers}_${from}_${to}.json`;
+}
+
+function generateRTATCacheFilename(tickers, fromISO, toISO) {
+  const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
+  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
+  const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
+  return `rtat_${safeTickers}_${from}_${to}.json`;
+}
+
 exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
-  await fs.mkdir(cacheDir, { recursive: true });
+  await ensureCacheDir();
 
   const filename = generateCacheFilename(symbol, fromISO, toISO, interval);
   const filePath = path.join(cacheDir, filename);
@@ -31,6 +50,7 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     return JSON.parse(cachedData);
   } catch (error) {
     if (error.code !== "ENOENT") {
+      console.error("Error reading OHLC cache file:", error);
     }
   }
 
@@ -52,31 +72,157 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     symbol
   )}?${params.toString()}`;
 
-  let resp;
   try {
-    resp = await axios.get(url);
+    const resp = await axios.get(url);
+    const raw = Array.isArray(resp.data) ? resp.data : [];
+    // Filter valid data points
+    const data = raw.filter(
+      (d) =>
+        d.datetime &&
+        !isNaN(d.open) &&
+        !isNaN(d.high) &&
+        !isNaN(d.low) &&
+        !isNaN(d.close) &&
+        !isNaN(d.volume)
+    );
+
+    if (data.length > 0) {
+      try {
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+      } catch (writeError) {
+        // Log or ignore write errors
+      }
+    }
+
+    return data;
   } catch (err) {
     throw err;
   }
+};
 
-  const raw = Array.isArray(resp.data) ? resp.data : [];
-  const data = raw.filter(
-    (d) =>
-      d.datetime &&
-      !isNaN(d.open) &&
-      !isNaN(d.high) &&
-      !isNaN(d.low) &&
-      !isNaN(d.close) &&
-      !isNaN(d.volume)
-  );
+exports.fetchNews = async (tickers, fromISO, toISO) => {
+  await ensureCacheDir();
 
-  if (data.length > 0) {
-    try {
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-    } catch (writeError) {}
+  const filename = generateNewsCacheFilename(tickers, fromISO, toISO);
+  const filePath = path.join(cacheDir, filename);
+
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      // Unexpected error, handle/log
+      console.error("Error reading news cache:", err);
+    }
   }
 
-  return data;
+  const publicationDomains = {
+    "Market Watch": ["marketwatch.com"],
+    "Bloom Berg": ["bloomberg.com"],
+    Reuters: ["reuters.com"],
+    "Financial Times": ["ft.com", "financialtimes.com"],
+    WSJ: ["wsj.com", "dowjones.com"],
+    "Yahoo Finance": ["finance.yahoo.com"],
+  };
+
+  const identifyPublication = (link) => {
+    const linkLower = (link || "").toLowerCase();
+    for (const [pub, domains] of Object.entries(publicationDomains)) {
+      for (const domain of domains) {
+        if (linkLower.includes(domain)) {
+          return pub;
+        }
+      }
+    }
+    return null;
+  };
+
+  let allNews = [];
+
+  for (const ticker of tickers) {
+    try {
+      const url = `${baseUrl}news?s=${ticker}&from=${fromISO}&to=${toISO}&limit=100&api_token=${apiKey}&fmt=json`;
+      const response = await axios.get(url);
+
+      if (response.data && Array.isArray(response.data)) {
+        const filtered = response.data
+          .map((item) => {
+            const publication = identifyPublication(item.link);
+            return publication
+              ? {
+                  date: item.date,
+                  publication,
+                  headline: item.title,
+                  link: item.link,
+                  symbol: ticker,
+                }
+              : null;
+          })
+          .filter((item) => item !== null);
+
+        allNews = allNews.concat(filtered);
+      }
+    } catch (error) {
+      // Log or ignore individual ticker errors
+      console.error(`Error fetching news for ticker ${ticker}:`, error.message);
+    }
+  }
+
+  // Sort news by descending date
+  allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  try {
+    await fs.writeFile(filePath, JSON.stringify(allNews, null, 2), "utf-8");
+  } catch (writeErr) {
+  }
+
+  return allNews;
+};
+
+exports.fetchRTAT = async (tickers, fromISO, toISO) => {
+  await ensureCacheDir();
+
+  const filename = generateRTATCacheFilename(tickers, fromISO, toISO);
+  const filePath = path.join(cacheDir, filename);
+
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      // Unexpected error reading cache
+      console.error("Error reading RTAT cache:", err);
+    }
+  }
+
+  let allData = {};
+
+  for (const ticker of tickers) {
+    try {
+      const url = `https://data.nasdaq.com/api/v3/datatables/NDAQ/RTAT?ticker=${ticker}&date.gte=${fromISO}&date.lte=${toISO}&qopts.columns=date,ticker,activity,sentiment&api_key=${nasdaqApiKey}`;
+      const response = await axios.get(url);
+      const rows = response.data?.datatable?.data || [];
+
+      const perDay = rows.map((row) => ({
+        date: row[0],
+        activity: row[2],
+        sentiment: row[3],
+      }));
+
+      allData[ticker] = perDay;
+    } catch (error) {
+      console.error(`Error fetching RTAT for ${ticker}:`, error.message);
+      allData[ticker] = [];
+    }
+  }
+
+  try {
+    await fs.writeFile(filePath, JSON.stringify(allData, null, 2), "utf-8");
+  } catch (writeErr) {
+    // Ignore cache write errors
+  }
+
+  return allData;
 };
 
 exports.fetchAndSaveTicker = async () => {
@@ -156,82 +302,3 @@ exports.clearCacheFiles = async () => {
     throw new Error("Failed to clear cache files due to a server error.");
   }
 };
-exports.fetchNews = async (tickers, from, to) => {
-  const publicationDomains = {
-    "Market Watch": ["marketwatch.com"],
-    "Bloom Berg": ["bloomberg.com"],
-    Reuters: ["reuters.com"],
-    "Financial Times": ["ft.com", "financialtimes.com"],
-    WSJ: ["wsj.com", "dowjones.com"],
-    "Yahoo Finance": ["finance.yahoo.com"],
-  };
-
-  const identifyPublication = (link) => {
-    const linkLower = link.toLowerCase();
-    for (const [pub, domains] of Object.entries(publicationDomains)) {
-      for (const domain of domains) {
-        if (linkLower.includes(domain)) {
-          return pub;
-        }
-      }
-    }
-    return null;
-  };
-
-  let allNews = [];
-
-  for (const ticker of tickers) {
-    try {
-      const url = `${baseUrl}news?s=${ticker}&from=${from}&to=${to}&limit=100&api_token=${apiKey}&fmt=json`;
-      const response = await axios.get(url);
-
-      if (response.data && Array.isArray(response.data)) {
-        const filteredForTicker = response.data
-          .map((item) => {
-            const publication = identifyPublication(item.link || "");
-            return publication
-              ? {
-                  date: item.date,
-                  publication: publication,
-                  headline: item.title,
-                  link: item.link,
-                  symbol: ticker,
-                }
-              : null;
-          })
-          .filter((item) => item !== null);
-
-        allNews = allNews.concat(filteredForTicker);
-      }
-    } catch (error) {
-    }
-  }
-
-  allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  return allNews;
-};
-exports.fetchRTAT = async (tickers, from, to) => {
-  let allData = {};
-
-  for (const ticker of tickers) {
-    try {
-      const url = `https://data.nasdaq.com/api/v3/datatables/NDAQ/RTAT?ticker=${ticker}&date.gte=${from}&date.lte=${to}&qopts.columns=date,ticker,activity,sentiment&api_key=${nasdaqApiKey}`;
-      const response = await axios.get(url);
-      const rows = response.data.datatable.data;
-
-      const perDay = rows.map(row => ({
-        date: row[0],         
-        activity: row[2],     
-        sentiment: row[3],    
-      }));
-
-      allData[ticker] = perDay;
-    } catch (error) {
-      allData[ticker] = []; 
-    }
-  }
-
-  return allData;
-};
-
