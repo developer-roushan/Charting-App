@@ -662,9 +662,14 @@ function Logout() {
     });
 }
 function Realtime() {
-  
-  window.open("/realtime", "_blank");
+  var mainSymbol = document.getElementById('ticker-code').value.trim().toUpperCase();
+  if (!mainSymbol) {
+    alert("Please enter or select a main ticker!");
+    return;
+  }
+  window.open("/realtime?symbol=" + encodeURIComponent(mainSymbol), "_blank");
 }
+
 function openChangePasswordModal() {
   document.getElementById("changePasswordModal").style.display = "flex";
   document.body.style.overflow = "hidden";
@@ -902,6 +907,7 @@ function computeHeikinAshi(ohlcData) {
 
   return haData;
 }
+
 function openRenkoSettingsModal() {
   const modal = document.getElementById("renkoSettingsModal");
   modal.style.display = "flex";

@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/css/realtime.css" />
+  <link rel="stylesheet" href="/css/chart.css" />
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
 </head>
@@ -71,6 +72,8 @@
                   <ul id="realtime-compare-ticker-list-2" class="ticker-list"></ul>
                 </div>
               </label>
+              <input type="hidden" id="realtime-main-symbol" />
+
             </div>
           </div>
         </div>
@@ -84,9 +87,11 @@
         <button
           id="realtime-expandChartBtn"
           class="expand-btn"
-          title="Expand/Shrink"
+          title="Expand/Shrink" 
+          style="display: none;"         
         >
-          <span id="realtime-expandIcon" class="material-icons">fullscreen</span>
+          <span id="realtime-expandIcon"  class="material-icons" >fullscreen</span>
+          
         </button>
       </div>
       <div id="realtime-chartDiv"></div>

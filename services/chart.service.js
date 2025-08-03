@@ -344,7 +344,7 @@ exports.fetchRealtimeData = async (symbol, interval) => {
     to: String(now)
   });
   const url = `${baseUrl}intraday/${encodeURIComponent(symbol)}?${params.toString()}`;
-
+  console.log(url);
   try {
     const resp = await axios.get(url);
     // resp.data: [{ datetime, open, high, low, close, volume }, ...]
