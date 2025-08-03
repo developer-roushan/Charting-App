@@ -661,6 +661,10 @@ function Logout() {
       window.location.href = "/";
     });
 }
+function Realtime() {
+  
+  window.open("/realtime", "_blank");
+}
 function openChangePasswordModal() {
   document.getElementById("changePasswordModal").style.display = "flex";
   document.body.style.overflow = "hidden";

@@ -7,30 +7,20 @@ const chartService = require("./services/chart.service");
 const app = express();
 const PORT = process.env.PORT || 3000;
 require("dotenv").config();
-
-// Parse form data
 app.use(express.urlencoded({ extended: true }));
-
-// Session middleware
 app.use(
   session({
     secret: "yourSecretKey",
     resave: false,
     saveUninitialized: true,
     cookie: {
-      maxAge: 5 * 60 * 1000, // 5 minutes in milliseconds
+      maxAge: 5 * 60 * 1000,
     },
-    rolling: true, // Reset maxAge on every response (activity)
+    rolling: true, 
   })
 );
-
-// Serve static files
 app.use(express.static(path.join(__dirname, "public")));
-
-// Chart routes (API)
 app.use("/api/chart", chartRoutes);
-
-// Login page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "views/index.html"));
 });
@@ -39,8 +29,6 @@ app.get("/logout", (req, res) => {
     res.redirect("/");
   });
 });
-
-// Handle login
 app.post("/login", async (req, res) => {
   const { password } = req.body;
   if (password === process.env.PASSWORD) {
@@ -57,13 +45,10 @@ app.post("/login", async (req, res) => {
     );
   }
 });
-
 app.get("/api/chart/ticker", async (req, res) => {
   const data = await chartService.fetchTicker();
   res.json(data);
 });
-
-// Serve chart.html if logged in
 app.get("/chart", (req, res) => {
   if (req.session.loggedIn) {
     res.sendFile(path.join(__dirname, "views/public/chart.html"));
@@ -71,7 +56,13 @@ app.get("/chart", (req, res) => {
     res.redirect("/");
   }
 });
-
+app.get("/realtime", (req, res) => {
+  if (req.session.loggedIn) {
+    res.sendFile(path.join(__dirname, "views/public/realtime.html"));
+  } else {
+    res.redirect("/");
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -8,5 +8,9 @@ router.get('/changePassword', chartController.changePassword);
 router.delete('/cache', chartController.clearCache);
 router.get('/news', chartController.getNews);
 router.get('/rtat', chartController.getRTAT);
+router.get('/realtime', chartController.getRealtimePage);
+router.get('/realtime-data', chartController.getRealtimeData);
+router.post('/clear-realtime-cache', chartController.clearRealtimeCache);
+router.get('/rtat', chartController.getRTATData);
 
 module.exports = router;

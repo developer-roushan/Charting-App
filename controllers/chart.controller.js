@@ -9,7 +9,6 @@ exports.getOHLC = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 exports.getTicker = async (req, res) => {
   try {
     const data = await chartService.fetchTicker();
@@ -18,7 +17,6 @@ exports.getTicker = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 exports.changePassword = async (oldPass, newPass) => {
   try {
     const data = await chartService.changePassword(oldPass, newPass);
@@ -27,7 +25,6 @@ exports.changePassword = async (oldPass, newPass) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 exports.clearCache = async (req, res) => {
   try {
     const result = await chartService.clearCacheFiles();
@@ -45,7 +42,6 @@ exports.getNews = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch news' });
   }
 };
-
 exports.getRTAT = async (req, res) => {
   const { tickers, from, to } = req.query;
   try {
@@ -54,4 +50,22 @@ exports.getRTAT = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch RTAT averages' });
   }
+};
+exports.getRealtimePage = (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/realtime.html'));
+};
+exports.getRealtimeData = async (req, res) => {
+  const { symbol, interval } = req.query;
+  const data = await chartService.fetchRealtimeData(symbol, interval);
+  res.json(data);
+};
+exports.clearRealtimeCache = async (req, res) => {
+  const { symbol } = req.query;
+  await chartService.clearRealtimeCache(symbol);
+  res.json({ success: true });
+};
+exports.getRTATData = async (req, res) => {
+  const { tickers, from, to } = req.query;
+  const result = await chartService.fetchRTAT(tickers.split(','), from, to);
+  res.json(result);
 };

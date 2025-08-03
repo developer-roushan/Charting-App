@@ -302,3 +302,73 @@ exports.clearCacheFiles = async () => {
     throw new Error("Failed to clear cache files due to a server error.");
   }
 };
+
+
+
+function generateRealtimeCacheFilename(symbol, interval) {
+  const date = new Date().toISOString().split('T')[0];
+  const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
+  return `realtime_${safeSymbol}_${date}_${interval}.json`;
+}
+
+exports.fetchRealtimeData = async (symbol, interval) => {
+  await ensureCacheDir();
+  const filename = generateRealtimeCacheFilename(symbol, interval);
+  const filePath = path.join(__dirname, "..", "data", "cache", filename);
+
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") console.error("Error reading realtime cache:", err);
+  }
+
+  const intervalMap = {
+    '1min': '1m', '1m': '1m',
+    '15min': '15m', '15m': '15m',
+    '30min': '30m', '30m': '30m',
+    '60min': '1h', '60m': '1h', '1h': '1h'
+  };
+  const apiInterval = intervalMap[(interval || '').toLowerCase()] || '1m';
+
+  const now = Math.floor(Date.now() / 1000);
+  const today4AM = new Date();
+  today4AM.setHours(4, 0, 0, 0);
+  const fromTs = Math.floor(today4AM.getTime() / 1000);
+
+  const params = new URLSearchParams({
+    api_token: apiKey,
+    fmt: "json",
+    interval: apiInterval,
+    from: String(fromTs),
+    to: String(now)
+  });
+  const url = `${baseUrl}intraday/${encodeURIComponent(symbol)}?${params.toString()}`;
+
+  try {
+    const resp = await axios.get(url);
+    // resp.data: [{ datetime, open, high, low, close, volume }, ...]
+    const raw = Array.isArray(resp.data) ? resp.data : [];
+    // filter for valid bars
+    const data = raw.filter(d =>
+      d.datetime && !isNaN(d.open) && !isNaN(d.high) && !isNaN(d.low) &&
+      !isNaN(d.close) && !isNaN(d.volume)
+    );
+    if (data.length > 0) {
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+    }
+    return data;
+  } catch (err) {
+    console.error("Error fetching realtime data:", err.message || err);
+    return [];
+  }
+};
+exports.clearRealtimeCache = async (symbol) => {
+  const filename = generateRealtimeCacheFilename(symbol, '1min');
+  const filePath = path.join(cacheDir, filename);
+  try {
+    await fs.unlink(filePath);
+  } catch (err) {
+    if (err.code !== "ENOENT") console.error("Error clearing realtime cache:", err);
+  }
+};
