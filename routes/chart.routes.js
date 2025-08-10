@@ -12,5 +12,5 @@ router.get('/realtime', chartController.getRealtimePage);
 router.get('/realtime-data', chartController.getRealtimeData);
 router.post('/clear-realtime-cache', chartController.clearRealtimeCache);
 router.get('/rtat', chartController.getRTATData);
-
+router.get('/realtime-tickData', chartController.getRealtimeTickData);
 module.exports = router;

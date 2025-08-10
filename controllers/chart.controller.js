@@ -69,3 +69,8 @@ exports.getRTATData = async (req, res) => {
   const result = await chartService.fetchRTAT(tickers.split(','), from, to);
   res.json(result);
 };
+exports.getRealtimeTickData = async (req, res) => {
+  const { symbol } = req.query;
+  const fullData = await chartService.fetchRealtimeTickData(symbol);
+  res.json(fullData);
+};

@@ -34,6 +34,11 @@
         >
           Generate chart
         </button>
+
+        <button id="ohlcvBtn" onclick="openOHLCVModal();" class="nav-btn">
+          OHLCV
+        </button>
+
         <button
           id="deleteHistoryBtn"
           onclick="deleteCacheHistory();"
@@ -51,7 +56,7 @@
       <div class="chart-controls-bar">
         <div class="chart-controls">
           <label>
-            Ticker:
+            Ticker 1:
             <div class="ticker-autocomplete">
               <input
                 type="text"
@@ -85,10 +90,10 @@
           <label>
             Interval:
             <select id="interval">
-              <option value="1m">1min</option>
-              <option value="15m">15min</option>
-              <option value="30m">30min</option>
-              <option value="1h">60min</option>
+              <option value="1m">1 min</option>
+              <option value="15m">15 min</option>
+              <option value="30m">30 min</option>
+              <option value="1h">60 min</option>
               <option value="static">Static</option>
             </select>
             <span class="input-error" id="error-interval"></span>
@@ -115,7 +120,7 @@
               <div class="comparison-tickers-container">
                 <div class="form-group">
                   <label>
-                    Ticker 1:
+                    Ticker 2:
                     <div class="ticker-autocomplete">
                       <input
                         type="text"
@@ -131,7 +136,7 @@
 
                 <div class="form-group">
                   <label>
-                    Ticker 2:
+                    Ticker 3:
                     <div class="ticker-autocomplete">
                       <input
                         type="text"
@@ -146,16 +151,13 @@
                 </div>
               </div>
             </div>
-<div
-            id="chartInfoBox"
-            class="chart-info-box"            
-          >
-            <div id="infoTime"></div>
-            <div id="infoPrice"></div>
-            <div id="infoVolume"></div>
-            <div id="infoVWAP"></div>
-            <div id="infoRTAT"></div>
-          </div>
+            <div id="chartInfoBox" class="chart-info-box">
+              <div id="infoTime"></div>
+              <div id="infoPrice"></div>
+              <div id="infoVolume"></div>
+              <div id="infoVWAP"></div>
+              <div id="infoRTAT"></div>
+            </div>
             <button
               id="expandChartBtn"
               class="expand-btn"
@@ -164,7 +166,7 @@
               <span id="expandIcon" class="material-icons">fullscreen</span>
             </button>
           </div>
-          
+
           <div id="chartDiv"></div>
         </div>
         <aside class="side-panel card">
@@ -338,6 +340,94 @@
         </form>
       </div>
     </div>
+    <div id="ohlcvModal" class="ohlcv-modal" style="display: none">
+      <div class="ohlcv-modal-content">
+        <span class="ohlcv-close" onclick="closeOHLCVModal()">&times;</span>
+        <h2>OHLCV</h2>
+        <form class="ohlcv-form" onsubmit="return false;">
+          <div class="ohlcv-fields-row">
+            <div class="ohlcv-field short-field">
+              <label for="ohlcv-ticker">Ticker</label>
+              <div class="ticker-autocomplete">
+                <input
+                  type="text"
+                  id="ohlcv-ticker"
+                  placeholder="Enter Ticker(s)"
+                  autocomplete="off"
+                />
+                <input type="hidden" id="ohlcv-ticker-code" />
+                <ul id="ohlcv-ticker-list" class="ticker-list"></ul>
+              </div>
+            </div>
+
+            <div class="ohlcv-field short-field">
+              <label for="ohlcv-date-from">From</label>
+              <input type="datetime-local" id="ohlcv-date-from" />
+            </div>
+            <div class="ohlcv-field short-field">
+              <label for="ohlcv-date-to">To</label>
+              <input type="datetime-local" id="ohlcv-date-to" />
+            </div>
+            <div class="ohlcv-field short-field">
+              <label for="ohlcv-interval">Interval</label>
+              <select id="ohlcv-interval">
+                <option value="1m">1 min</option>
+                <option value="5m">5 min</option>
+                <option value="30m">30 min</option>
+                <option value="1h">60 min</option>
+              </select>
+            </div>
+
+            <!-- Action buttons inline -->
+            <div class="ohlcv-actions-inline">
+              <button
+                type="button"
+                class="btn ohlcv-btn"
+                onclick="getOHLCVRealTime()"
+              >
+                Real Time
+              </button>
+              <button
+                type="button"
+                class="btn ohlcv-btn"
+                onclick="generateOHLCVTable()"
+              >
+                Generate
+              </button>
+              <button
+                type="button"
+                class="btn ohlcv-btn"
+                onclick="clearOHLCVTable()"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div class="ohlcv-output">
+          <table class="ohlcv-table" id="ohlcvTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Open</th>
+                <th>High</th>
+                <th>Low</th>
+                <th>Close</th>
+                <th>ADJCLOSE</th>
+                <th>VOLUME</th>
+                <th>VSR</th>
+                <th>VWVC</th>
+                <th>RSI</th>
+              </tr>
+            </thead>
+            <tbody id="ohlcvTableBody"></tbody>
+          </table>
+        </div>        
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <script src="/js/chart.js"></script>
   </body>

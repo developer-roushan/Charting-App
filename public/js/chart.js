@@ -28,19 +28,33 @@ async function init() {
 }
 function setMaxDateTime() {
   const now = new Date();
-
+  const oneDayBefore = new Date(now);
+  oneDayBefore.setDate(oneDayBefore.getDate() - 1);
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
+  const beforeday = String(oneDayBefore.getDate()).padStart(2, "0");
 
   const maxDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
   const maxDate = `${year}-${month}-${day}`;
+  const beforeDateTime = `${year}-${month}-${beforeday}T${hours}:${minutes}`;
+  const beforeDate = `${year}-${month}-${beforeday}`;
+
   document.getElementById("dateFrom").max = maxDateTime;
   document.getElementById("dateTo").max = maxDateTime;
   document.getElementById("newsEndDate").max = maxDate;
   document.getElementById("newsStartDate").max = maxDate;
+  document.getElementById("ohlcv-date-from").max = maxDateTime;
+  document.getElementById("ohlcv-date-to").max = maxDateTime;
+
+  document.getElementById("newsEndDate").value = maxDate;
+  document.getElementById("newsStartDate").value = beforeDate;
+  document.getElementById("dateFrom").value = beforeDateTime;
+  document.getElementById("dateTo").value = maxDateTime;
+  document.getElementById("ohlcv-date-from").value = beforeDateTime;
+  document.getElementById("ohlcv-date-to").value = maxDateTime;
 }
 function setupChart() {
   if (window.chart) {
@@ -81,56 +95,66 @@ function setupChart() {
       closeRenkoSettingsModal();
     }
   };
-  chart.subscribeCrosshairMove(param => {
-  if (!isStaticAndEligibleChartType()) {
-    hideChartInfoBox();
-    return;
-  }
-  if (!param || !param.time || !param.point || param.seriesData.size === 0) {
-    hideChartInfoBox();
-    return;
-  }
-
-  const hoveredTime = param.time;
-  const mainPoint = ohlcData.find(d => d.time === hoveredTime);
-  if (!mainPoint) {
-    hideChartInfoBox();
-    return;
-  }
-  const idx = ohlcData.findIndex(d => d.time === hoveredTime);
-
-  const price = mainPoint.close.toFixed(2);
-  const volume = mainPoint.volume;
-
-  let vwap = '--';
-  if (idx >= 0) {
-    let pvSum = 0, volSum = 0;
-    for (let i = 0; i <= idx; i++) {
-      const typicalPrice = (ohlcData[i].high + ohlcData[i].low + ohlcData[i].close) / 3;
-      pvSum += typicalPrice * ohlcData[i].volume;
-      volSum += ohlcData[i].volume;
+  chart.subscribeCrosshairMove((param) => {
+    if (!isStaticAndEligibleChartType()) {
+      hideChartInfoBox();
+      return;
     }
-    vwap = volSum > 0 ? (pvSum / volSum).toFixed(2) : '--';
-  }
-
-  let rtatSentiment = '--', rtatActivity = '--';
-  const symbol = document.getElementById('ticker-code').value.trim(); 
-  if (symbol && RTATData && RTATData[symbol]) {
-    const lagDateObj = new Date(mainPoint.time * 1000);
-    lagDateObj.setDate(lagDateObj.getDate() - 1);
-    const lagDateStr = lagDateObj.toISOString().slice(0, 10);
-
-    const rtatDaily = RTATData[symbol].find(r => r.date === lagDateStr);
-    if (rtatDaily) {
-      rtatSentiment = rtatDaily.sentiment ?? '--';
-      rtatActivity = rtatDaily.activity ?? '--';
+    if (!param || !param.time || !param.point || param.seriesData.size === 0) {
+      hideChartInfoBox();
+      return;
     }
-  }
 
-  const timeString = new Date(hoveredTime * 1000).toLocaleString();
+    const hoveredTime = param.time;
+    const mainPoint = ohlcData.find((d) => d.time === hoveredTime);
+    if (!mainPoint) {
+      hideChartInfoBox();
+      return;
+    }
+    const idx = ohlcData.findIndex((d) => d.time === hoveredTime);
 
-  showChartInfoBox({ timeString, price, volume, vwap, rtatSentiment, rtatActivity });
-});
+    const price = mainPoint.close.toFixed(2);
+    const volume = mainPoint.volume;
+
+    let vwap = "--";
+    if (idx >= 0) {
+      let pvSum = 0,
+        volSum = 0;
+      for (let i = 0; i <= idx; i++) {
+        const typicalPrice =
+          (ohlcData[i].high + ohlcData[i].low + ohlcData[i].close) / 3;
+        pvSum += typicalPrice * ohlcData[i].volume;
+        volSum += ohlcData[i].volume;
+      }
+      vwap = volSum > 0 ? (pvSum / volSum).toFixed(2) : "--";
+    }
+
+    let rtatSentiment = "--",
+      rtatActivity = "--";
+    const symbol = document.getElementById("ticker-code").value.trim();
+    if (symbol && RTATData && RTATData[symbol]) {
+      const lagDateObj = new Date(mainPoint.time * 1000);
+      lagDateObj.setDate(lagDateObj.getDate() - 1);
+      const lagDateStr = lagDateObj.toISOString().slice(0, 10);
+
+      const rtatDaily = RTATData[symbol].find((r) => r.date === lagDateStr);
+      if (rtatDaily) {
+        rtatSentiment = rtatDaily.sentiment ?? "--";
+        rtatActivity = rtatDaily.activity ?? "--";
+      }
+    }
+
+    const timeString = new Date(hoveredTime * 1000).toLocaleString();
+
+    showChartInfoBox({
+      timeString,
+      price,
+      volume,
+      vwap,
+      rtatSentiment,
+      rtatActivity,
+    });
+  });
 }
 function setupTicker() {
   const chartTypeSelect = document.getElementById("chartType");
@@ -160,6 +184,12 @@ function setupTicker() {
       listId: "compare-ticker-list-2",
       codeId: "compare-ticker-code-2",
       defaultValue: "",
+    },
+    {
+      inputId: "ohlcv-ticker",
+      listId: "ohlcv-ticker-list",
+      codeId: "ohlcv-ticker-code",
+      defaultValue: "AAPL",
     },
   ];
 
@@ -244,10 +274,10 @@ function newsExpandSrink() {
 
     if (isNewsExpanded) {
       newsExpandIcon.textContent = "fullscreen_exit";
-      displayNews(allNewsData); 
+      displayNews(allNewsData);
     } else {
       newsExpandIcon.textContent = "fullscreen";
-      displayNews(allNewsData.slice(0, 7)); 
+      displayNews(allNewsData.slice(0, 7));
     }
   });
 }
@@ -315,13 +345,8 @@ async function fetchAndRenderChartData(options = {}) {
   };
 
   try {
-    const mainResp = await fetch(buildUrl(symbol).toString());
-    if (!mainResp.ok)
-      throw new Error(`HTTP ${mainResp.status} ${mainResp.statusText}`);
+    const mainResp = await fetch(buildUrl(symbol).toString());    
     const mainPayload = await mainResp.json();
-    if (mainPayload.success === false)
-      throw new Error(mainPayload.message || "Server returned an error");
-
     const mainRows = Array.isArray(mainPayload)
       ? mainPayload
       : mainPayload.data || [];
@@ -505,8 +530,8 @@ function switchChartType(type, mainData, compareDataArray = []) {
   const candleData = mainData;
   const lineData = mainData.map((d) => ({ time: d.time, value: d.close }));
 
-  const mainColor = "#ADD8E6"; 
-  const compareColors = ["#90EE90", "#FFDAB9"]; 
+  const mainColor = "#ADD8E6";
+  const compareColors = ["#90EE90", "#FFDAB9"];
 
   const createSeries = (color, seriesData) => {
     if (lowerCaseType === "area") {
@@ -526,29 +551,29 @@ function switchChartType(type, mainData, compareDataArray = []) {
       s.setData(seriesData);
       return s;
     }
-    return null; 
+    return null;
   };
 
   switch (lowerCaseType) {
     case "renko":
       series = chart.addCandlestickSeries({
-        upColor: "#00ff00", 
-        downColor: "#ff0000", 
+        upColor: "#00ff00",
+        downColor: "#ff0000",
         borderVisible: false,
-        wickVisible: false, 
+        wickVisible: false,
       });
-      series.setData(candleData); 
+      series.setData(candleData);
       break;
 
     case "heikin":
       series = chart.addCandlestickSeries({
-        upColor: "#00ff00", 
-        downColor: "#ff0000", 
+        upColor: "#00ff00",
+        downColor: "#ff0000",
         borderVisible: false,
         wickUpColor: "#00ff00",
         wickDownColor: "#ff0000",
       });
-      series.setData(candleData); 
+      series.setData(candleData);
       break;
 
     case "area":
@@ -662,14 +687,16 @@ function Logout() {
     });
 }
 function Realtime() {
-  var mainSymbol = document.getElementById('ticker-code').value.trim().toUpperCase();
+  var mainSymbol = document
+    .getElementById("ticker-code")
+    .value.trim()
+    .toUpperCase();
   if (!mainSymbol) {
     alert("Please enter or select a main ticker!");
     return;
   }
   window.open("/realtime?symbol=" + encodeURIComponent(mainSymbol), "_blank");
 }
-
 function openChangePasswordModal() {
   document.getElementById("changePasswordModal").style.display = "flex";
   document.body.style.overflow = "hidden";
@@ -907,7 +934,6 @@ function computeHeikinAshi(ohlcData) {
 
   return haData;
 }
-
 function openRenkoSettingsModal() {
   const modal = document.getElementById("renkoSettingsModal");
   modal.style.display = "flex";
@@ -1107,18 +1133,20 @@ async function generateRTAT() {
 
   if (tickers.length === 0 || !fromDate || !toDate) {
     alert("Please select tickers and dates.");
-    return {}; 
+    return {};
   }
 
-  const url = `${baseUrl}rtat?tickers=${tickers.join(",")}&from=${fromDate}&to=${toDate}`;
+  const url = `${baseUrl}rtat?tickers=${tickers.join(
+    ","
+  )}&from=${fromDate}&to=${toDate}`;
 
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const averages = await response.json();
-    return averages; 
+    return averages;
   } catch (error) {
-    return {}; 
+    return {};
   }
 }
 function renderCoreMetrics(container, ticker, data) {
@@ -1141,12 +1169,8 @@ function renderCoreMetrics(container, ticker, data) {
 function render4w52wMetrics(container, data) {
   container.innerHTML = `
     <div class="summary-box">
-      <div><strong>4W:</strong> ${
-        data.avg4W?.toFixed(2) ?? "--"
-      }</div>
-      <div><strong>52W:</strong> ${
-        data.avg52W?.toFixed(2) ?? "--"
-      }</div>
+      <div><strong>4W:</strong> ${data.avg4W?.toFixed(2) ?? "--"}</div>
+      <div><strong>52W:</strong> ${data.avg52W?.toFixed(2) ?? "--"}</div>
     </div>
   `;
 }
@@ -1350,27 +1374,213 @@ function calculateSummary(ohlcData, rtatData) {
   };
 }
 function isStaticAndEligibleChartType() {
-  const intervalElem = document.getElementById('interval');
-  const chartTypeElem = document.getElementById('chartType');
+  const intervalElem = document.getElementById("interval");
+  const chartTypeElem = document.getElementById("chartType");
   if (!intervalElem || !chartTypeElem) return false;
   const intervalValue = intervalElem.value?.toLowerCase?.() || "";
   const chartTypeValue = chartTypeElem.value?.toLowerCase?.() || "";
   return (
-    intervalValue === "static"
-    && ["line", "area", "baseline"].includes(chartTypeValue)
+    intervalValue === "static" &&
+    ["line", "area", "baseline"].includes(chartTypeValue)
   );
 }
-function showChartInfoBox({ timeString, price, volume, vwap, rtatSentiment, rtatActivity }) {
-  const box = document.getElementById('chartInfoBox');
-  box.classList.add('active');
-  document.getElementById('infoTime').innerHTML = "<strong>Time:</strong> " + (timeString ?? "--");
-  document.getElementById('infoPrice').innerHTML = "<strong>Price:</strong> " + (price !== undefined ? price : "--");
-  document.getElementById('infoVolume').innerHTML = "<strong>Volume:</strong> " + (volume !== undefined ? volume.toLocaleString() : "--");
-  document.getElementById('infoVWAP').innerHTML = "<strong>VWAP:</strong> " + (vwap !== undefined ? vwap : "--");
-  document.getElementById('infoRTAT').innerHTML = `<strong>RTAT:</strong> S=${rtatSentiment ?? "--"} / A=${rtatActivity ?? "--"}`;
+function showChartInfoBox({
+  timeString,
+  price,
+  volume,
+  vwap,
+  rtatSentiment,
+  rtatActivity,
+}) {
+  const box = document.getElementById("chartInfoBox");
+  box.classList.add("active");
+  document.getElementById("infoTime").innerHTML =
+    "<strong>Time:</strong> " + (timeString ?? "--");
+  document.getElementById("infoPrice").innerHTML =
+    "<strong>Price:</strong> " + (price !== undefined ? price : "--");
+  document.getElementById("infoVolume").innerHTML =
+    "<strong>Volume:</strong> " +
+    (volume !== undefined ? volume.toLocaleString() : "--");
+  document.getElementById("infoVWAP").innerHTML =
+    "<strong>VWAP:</strong> " + (vwap !== undefined ? vwap : "--");
+  document.getElementById("infoRTAT").innerHTML = `<strong>RTAT:</strong> S=${
+    rtatSentiment ?? "--"
+  } / A=${rtatActivity ?? "--"}`;
 }
 function hideChartInfoBox() {
- const box = document.getElementById('chartInfoBox');
-  box.classList.remove('active');
+  const box = document.getElementById("chartInfoBox");
+  box.classList.remove("active");
+}
+function openOHLCVModal() {
+  document.getElementById("ohlcvModal").style.display = "flex";
+}
+function closeOHLCVModal() {
+  document.getElementById("ohlcvModal").style.display = "none";
+}
+function clearOHLCVTable() {
+  document.getElementById("ohlcvTableBody").innerHTML = "";
+}
+function formatDate(dtValue) {
+  let d
+  if (typeof dtValue === "number") {
+    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue)
+  } else if (!isNaN(dtValue) && dtValue.trim() !== "") {
+    const num = Number(dtValue)
+    d = new Date(num.toString().length === 10 ? num * 1000 : num)
+  } else {
+    d = new Date(dtValue)
+  }
+  return isNaN(d) ? "-" : d.toISOString().slice(0, 10)
+}
+function formatTime(dtValue) {
+  let d
+  if (typeof dtValue === "number") {
+    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue)
+  } else if (!isNaN(dtValue) && dtValue.trim() !== "") {
+    const num = Number(dtValue)
+    d = new Date(num.toString().length === 10 ? num * 1000 : num)
+  } else {
+    d = new Date(dtValue)
+  }
+  return isNaN(d) ? "-" : d.toTimeString().slice(0, 5)
+}
+function calculateVWVC(open, close, volume) {
+  return (Number(close) - Number(open)) * Number(volume)
+}
+function calculateRSI(closes, period = 14) {
+  if (!Array.isArray(closes) || closes.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const delta = Number(closes[i]) - Number(closes[i - 1]);
+    if (delta > 0) gains += delta;
+    else losses -= delta;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  if (avgLoss === 0) return 100; 
+
+  let rs = avgGain / avgLoss;
+  let rsi = 100 - 100 / (1 + rs);
+
+  for (let i = period + 1; i < closes.length; i++) {
+    const delta = Number(closes[i]) - Number(closes[i - 1]);
+    const gain = Math.max(delta, 0);
+    const loss = Math.max(-delta, 0);
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    rsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + rs);
+  }
+  return rsi;
+}
+function calculateVSR(currentVolume, previousVolumes) {
+  if (!previousVolumes || previousVolumes.length === 0) return null;
+  const sum = previousVolumes.reduce((s, v) => s + Number(v), 0);
+  const avg = sum / previousVolumes.length;
+  if (avg === 0) return null;
+  return Number(currentVolume) / avg;
+}
+function normalizeOHLCVData(raw) {
+  const ts = raw.timestamp
+    ? (typeof raw.timestamp === "number" && raw.timestamp.toString().length === 10
+        ? raw.timestamp * 1000
+        : raw.timestamp)
+    : null
+  const dtStr = raw.datetime || (ts ? new Date(ts).toISOString().replace("T", " ").substring(0, 19) : null)
+  return {
+    timestamp: ts,
+    datetime: dtStr,
+    open: raw.open ?? null,
+    high: raw.high ?? null,
+    low: raw.low ?? null,
+    close: raw.close ?? null,
+    adjClose: raw.adjClose ?? raw.close ?? null,
+    volume: raw.volume ?? null,
+    prevVolumes: raw.prevVolumes ?? [],
+    prevCloses: raw.prevCloses ?? [],
+    vsr: raw.vsr ?? null,
+    vwvc: raw.vwvc ?? null,
+    rsi: raw.rsi ?? null
+  }
+}
+function extractIndicators(data) {
+  let vwvc = data.vwvc
+  if (vwvc == null && data.open != null && data.close != null && data.volume != null) {
+    vwvc = calculateVWVC(data.open, data.close, data.volume)
+  }
+  let vsr = data.vsr
+  if (vsr == null && Array.isArray(data.prevVolumes) && data.volume != null) {
+    vsr = calculateVSR(data.volume, data.prevVolumes)
+  }
+  let rsi = data.rsi?.value ?? data.rsi
+  if (rsi == null && Array.isArray(data.prevCloses)) {
+    rsi = calculateRSI(data.prevCloses, 14)
+  }
+  console.log(data);
+  return { vsr, vwvc, rsi }
+}
+function renderOHLCVRow(data) {
+  const { vsr, vwvc, rsi } = extractIndicators(data)
+  const row = document.createElement("tr")
+  row.innerHTML = `
+    <td>${formatDate(data.timestamp || data.date)}</td>
+    <td>${formatTime(data.timestamp || data.date)}</td>
+    <td>${data.open ?? "-"}</td>
+    <td>${data.high ?? "-"}</td>
+    <td>${data.low ?? "-"}</td>
+    <td>${data.close ?? "-"}</td>
+    <td>${data.adjClose ?? "-"}</td>
+    <td>${data.volume ?? "-"}</td>
+    <td>${vsr != null ? vsr.toFixed(2) : "-"}</td>
+    <td>${vwvc != null ? vwvc.toFixed(2) : "-"}</td>
+    <td>${rsi != null ? Number(rsi).toFixed(2) : "-"}</td>
+  `
+  document.getElementById("ohlcvTableBody").appendChild(row)
+}
+async function generateOHLCVTable() {
+  const ticker = document.getElementById("ohlcv-ticker").value.trim().toUpperCase()
+  document.getElementById("ohlcvTableBody").innerHTML = ""
+  const fromStr = document.getElementById("ohlcv-date-from").value
+  const toStr = document.getElementById("ohlcv-date-to").value
+  const interval = document.getElementById("ohlcv-interval").value
+  const fromDate = new Date(fromStr)
+  const toDate = new Date(toStr)
+  const url = new URL("ohlc", window.location.origin + baseUrl)
+  url.searchParams.set("symbol", ticker)
+  url.searchParams.set("from", fromDate.toISOString())
+  url.searchParams.set("to", toDate.toISOString())
+  url.searchParams.set("interval", interval)
+  const res = await fetch(url)
+  const rawData = await res.json()
+  if (Array.isArray(rawData)) {
+    rawData.sort((a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date));
+
+    rawData.forEach((bar, i) => {
+      const prevVolumes = i >= 14 ? rawData.slice(i - 14, i).map(b => b.volume) : [];
+      const prevCloses  = i >= 15 ? rawData.slice(i - 15, i + 1).map(b => b.close) : [];
+      const enriched    = { ...bar, prevVolumes, prevCloses };
+      renderOHLCVRow(normalizeOHLCVData(enriched));
+    });
+  } else {
+    renderOHLCVRow(normalizeOHLCVData(rawData));
+  }
+}
+async function getOHLCVRealTime() {
+  const ticker = document.getElementById("ohlcv-ticker").value.trim().toUpperCase()
+  document.getElementById("ohlcvTableBody").innerHTML = ""
+  const res = await fetch(`${baseUrl}realtime-tickData?symbol=${encodeURIComponent(ticker)}`)
+  const rawData = await res.json()
+if (Array.isArray(rawData)) {
+    rawData.sort((a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date));
+
+    rawData.forEach((bar, i) => {
+      const prevVolumes = i >= 14 ? rawData.slice(i - 14, i).map(b => b.volume) : [];
+      const prevCloses  = i >= 15 ? rawData.slice(i - 15, i + 1).map(b => b.close) : [];
+      const enriched    = { ...bar, prevVolumes, prevCloses };
+      renderOHLCVRow(normalizeOHLCVData(enriched));
+    });
+  } else {
+    renderOHLCVRow(normalizeOHLCVData(rawData));
+  }
 }
 

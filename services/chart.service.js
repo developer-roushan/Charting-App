@@ -13,8 +13,6 @@ const cacheDir = path.join(__dirname, "..", "data", "cache");
 async function ensureCacheDir() {
   await fs.mkdir(cacheDir, { recursive: true });
 }
-
-
 function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const from = fromISO
     ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
@@ -24,21 +22,18 @@ function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `${safeSymbol}_${from}_${to}_${int}.json`;
 }
-
 function generateNewsCacheFilename(tickers, fromISO, toISO) {
   const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
   const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
   const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
   return `news_${safeTickers}_${from}_${to}.json`;
 }
-
 function generateRTATCacheFilename(tickers, fromISO, toISO) {
   const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
   const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
   const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
   return `rtat_${safeTickers}_${from}_${to}.json`;
 }
-
 exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   await ensureCacheDir();
 
@@ -99,7 +94,6 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     throw err;
   }
 };
-
 exports.fetchNews = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
@@ -178,7 +172,6 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
 
   return allNews;
 };
-
 exports.fetchRTAT = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
@@ -224,14 +217,12 @@ exports.fetchRTAT = async (tickers, fromISO, toISO) => {
 
   return allData;
 };
-
 exports.fetchAndSaveTicker = async () => {
   let url = `${baseUrl}exchange-symbol-list/us?api_token=${apiKey}&type=common_stock&fmt=json`;
   const response = await axios.get(url);
   await saveTickerData(response.data);
   return response.data;
 };
-
 exports.fetchTicker = async () => {
   try {
     const data = await readTickerData();
@@ -240,16 +231,13 @@ exports.fetchTicker = async () => {
     return await exports.fetchAndSaveTicker();
   }
 };
-
 async function saveTickerData(data) {
   await fs.writeFile(tickerFilePath, JSON.stringify(data, null, 2), "utf-8");
 }
-
 async function readTickerData() {
   const raw = await fs.readFile(tickerFilePath, "utf-8");
   return JSON.parse(raw);
 }
-
 exports.changePassword = async (oldPass, newPass) => {
   const envPath = path.resolve(".env");
   const currentPassword = process.env.PASSWORD;
@@ -289,7 +277,6 @@ exports.changePassword = async (oldPass, newPass) => {
     return false;
   }
 };
-
 exports.clearCacheFiles = async () => {
   try {
     await fs.rm(cacheDir, { recursive: true, force: true });
@@ -302,15 +289,11 @@ exports.clearCacheFiles = async () => {
     throw new Error("Failed to clear cache files due to a server error.");
   }
 };
-
-
-
 function generateRealtimeCacheFilename(symbol, interval) {
   const date = new Date().toISOString().split('T')[0];
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `realtime_${safeSymbol}_${date}_${interval}.json`;
 }
-
 exports.fetchRealtimeData = async (symbol, interval) => {
   await ensureCacheDir();
   const filename = generateRealtimeCacheFilename(symbol, interval);
@@ -344,12 +327,9 @@ exports.fetchRealtimeData = async (symbol, interval) => {
     to: String(now)
   });
   const url = `${baseUrl}intraday/${encodeURIComponent(symbol)}?${params.toString()}`;
-  console.log(url);
   try {
     const resp = await axios.get(url);
-    // resp.data: [{ datetime, open, high, low, close, volume }, ...]
     const raw = Array.isArray(resp.data) ? resp.data : [];
-    // filter for valid bars
     const data = raw.filter(d =>
       d.datetime && !isNaN(d.open) && !isNaN(d.high) && !isNaN(d.low) &&
       !isNaN(d.close) && !isNaN(d.volume)
@@ -372,3 +352,10 @@ exports.clearRealtimeCache = async (symbol) => {
     if (err.code !== "ENOENT") console.error("Error clearing realtime cache:", err);
   }
 };
+exports.fetchRealtimeTickData = async (symbol) => {
+ const url = `${baseUrl}real-time/${encodeURIComponent(symbol)}?api_token=${apiKey}&fmt=json`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data;
+};
+

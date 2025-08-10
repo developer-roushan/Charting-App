@@ -1,20 +1,23 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Roboto', Arial, sans-serif;
+  font-family: "Roboto", Arial, sans-serif;
   background: #f4f6fa;
 }
-a, a:visited, a:active,a:hover {
+a,
+a:visited,
+a:active,
+a:hover {
   text-decoration: none;
   background: none;
   border: none;
   outline: none;
-  cursor: pointer; 
+  cursor: pointer;
 }
 
 .navbar {
   background: #1a2534;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -38,10 +41,10 @@ a, a:visited, a:active,a:hover {
   border: none;
   border-radius: 8px;
   font-size: 1.1rem;
-  padding: 12px 26px;
+  padding: 10px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 1px 6px rgba(44,62,80,0.08);
+  box-shadow: 0 1px 6px rgba(44, 62, 80, 0.08);
   transition: background 0.18s, color 0.18s, box-shadow 0.15s;
   outline: none;
   margin: 0;
@@ -49,7 +52,7 @@ a, a:visited, a:active,a:hover {
   text-align: center;
 }
 
-.nav-btn-logout{
+.nav-btn-logout {
   background: #e74c3c;
   color: #fff;
 }
@@ -57,7 +60,7 @@ a, a:visited, a:active,a:hover {
 .nav-btn:hover {
   background: #22a44e;
   color: #fff;
-  box-shadow: 0 2px 10px rgba(44,62,80,0.14);
+  box-shadow: 0 2px 10px rgba(44, 62, 80, 0.14);
 }
 
 .nav-btn-logout:hover {
@@ -89,13 +92,13 @@ a, a:visited, a:active,a:hover {
   cursor: pointer;
   font-size: 1.05rem;
 }
-.ticker-list li:hover, .ticker-list li.active {
+.ticker-list li:hover,
+.ticker-list li.active {
   background: #e6f3ff;
 }
 
-
 .form-group {
-  flex: 1; 
+  flex: 1;
   min-width: 250px;
 }
 .ticker-autocomplete input {
@@ -128,11 +131,11 @@ a, a:visited, a:active,a:hover {
 }
 .form-group label {
   font-weight: bold;
-  color: #333; 
+  color: #333;
 }
 
 .ticker-autocomplete input:focus {
-  border-color: #2196f3; 
+  border-color: #2196f3;
   outline: none;
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
@@ -143,7 +146,7 @@ a, a:visited, a:active,a:hover {
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); 
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -175,7 +178,7 @@ a, a:visited, a:active,a:hover {
 }
 
 #renkoSettingsForm button {
-  background-color: #2196f3; 
+  background-color: #2196f3;
   color: white;
   padding: 10px;
   border: none;
@@ -183,7 +186,6 @@ a, a:visited, a:active,a:hover {
   cursor: pointer;
   margin-top: 20px;
 }
-
 
 .dashboard-main {
   max-width: 1600px;
@@ -206,7 +208,7 @@ a, a:visited, a:active,a:hover {
   flex-wrap: wrap;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 8px 32px rgba(44,62,80,0.07);
+  box-shadow: 0 8px 32px rgba(44, 62, 80, 0.07);
   padding: 34px 38px 20px 38px;
   align-items: center;
   justify-content: space-between;
@@ -263,10 +265,10 @@ a, a:visited, a:active,a:hover {
   display: flex;
   align-items: center;
   min-width: 350px;
-  height: 34px;        
+  height: 34px;
   box-sizing: border-box;
   transition: opacity 0.15s;
-  gap:5px;
+  gap: 5px;
 }
 .chart-info-box[hidden] {
   display: flex !important;
@@ -287,7 +289,6 @@ a, a:visited, a:active,a:hover {
   visibility: visible;
   opacity: 1;
 }
-
 
 #ticker {
   width: 100%;
@@ -315,7 +316,7 @@ a, a:visited, a:active,a:hover {
   width: 100%;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 8px 32px rgba(44,62,80,0.09);
+  box-shadow: 0 8px 32px rgba(44, 62, 80, 0.09);
   padding: 36px 8px 24px 8px;
   min-width: 0;
   transition: padding 0.23s;
@@ -357,7 +358,7 @@ a, a:visited, a:active,a:hover {
   max-width: 1600px;
   background: #fff;
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(44,62,80,0.07);
+  box-shadow: 0 8px 32px rgba(44, 62, 80, 0.07);
   padding: 28px 32px 18px 32px;
   margin-bottom: 24px;
   margin-top: 14px;
@@ -409,13 +410,12 @@ a, a:visited, a:active,a:hover {
   font-size: 1.07rem;
   cursor: pointer;
   margin-top: 5px;
-  box-shadow: 0 1px 8px rgba(44,62,80,0.06);
+  box-shadow: 0 1px 8px rgba(44, 62, 80, 0.06);
   transition: background 0.15s;
 }
 .news-generate-btn:hover {
   background: #176fd3;
 }
-
 
 .expand-btn {
   background: #2196f3;
@@ -430,7 +430,7 @@ a, a:visited, a:active,a:hover {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(44,62,80,0.06);
+  box-shadow: 0 2px 10px rgba(44, 62, 80, 0.06);
   transition: background 0.16s;
   font-size: 2rem;
   margin-left: 8px;
@@ -450,7 +450,7 @@ a, a:visited, a:active,a:hover {
   height: 500px;
   background: #f7fafe;
   border-radius: 10px;
-  box-shadow: 0 1px 12px rgba(30,44,71,0.07);
+  box-shadow: 0 1px 12px rgba(30, 44, 71, 0.07);
   margin-bottom: 0;
   transition: height 0.23s;
 }
@@ -464,7 +464,9 @@ input.disabled {
 .chart-area.card.chart-expanded {
   position: fixed;
   top: 60px;
-  left: 0; right: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
   width: 100vw !important;
   max-width: 100vw !important;
@@ -473,7 +475,7 @@ input.disabled {
   border-radius: 0;
   padding: 18px 2vw 10px 2vw;
   background: #fff;
-  box-shadow: 0 0 50px rgba(60,60,80,0.13);
+  box-shadow: 0 0 50px rgba(60, 60, 80, 0.13);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -517,7 +519,7 @@ input.disabled {
   justify-content: center;
   border: none;
   font-size: 1.4rem;
-  box-shadow: 0 2px 10px rgba(44,62,80,0.06);
+  box-shadow: 0 2px 10px rgba(44, 62, 80, 0.06);
   cursor: pointer;
   transition: background 0.16s;
   z-index: 2;
@@ -528,7 +530,9 @@ input.disabled {
 .news-table.card.news-expanded {
   position: fixed !important;
   top: 60px;
-  left: 0; right: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 101;
   width: 100vw !important;
   max-width: 100vw !important;
@@ -537,7 +541,7 @@ input.disabled {
   border-radius: 0 !important;
   background: #fff;
   padding: 34px 3vw 24px 3vw !important;
-  box-shadow: 0 0 50px rgba(60,60,80,0.13);
+  box-shadow: 0 0 50px rgba(60, 60, 80, 0.13);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -551,7 +555,7 @@ input.disabled {
   max-width: 390px;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 8px 32px rgba(44,62,80,0.09);
+  box-shadow: 0 8px 32px rgba(44, 62, 80, 0.09);
   padding: 8px;
   margin: 0;
   display: flex;
@@ -584,7 +588,7 @@ input.disabled {
 .news-table.card {
   background: #fff;
   border-radius: 14px;
-  box-shadow: 0 2px 18px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.1);
   padding: 16px 24px;
   width: 100%;
   max-width: 1600px;
@@ -597,7 +601,8 @@ input.disabled {
   border-collapse: collapse;
   font-size: 1.05rem;
 }
-.news-table th, .news-table td {
+.news-table th,
+.news-table td {
   padding: 15px 17px;
   border-bottom: 1.3px solid #e1e6ec;
   text-align: left;
@@ -624,9 +629,164 @@ select.input-error-border {
   border-color: #e74c3c !important;
   background: #fff6f6;
 }
+.ohlcv-modal {
+  position: fixed;
+  z-index: 991;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(22, 13, 39, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
+.ohlcv-modal-content {
+  background: #fff;
+  padding: 36px 48px 28px;
+  border-radius: 18px;
+  box-shadow: 0 4px 32px #3a417055;
+  position: relative;
+  width: 85%;
+}
+
+.ohlcv-close {
+  position: absolute;
+  top: 21px;
+  right: 22px;
+  font-size: 26px;
+  color: #6a0dad;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.ohlcv-close:hover {
+  color: #c9302c;
+}
+
+.ohlcv-form {
+  margin-bottom: 8px;
+}
+
+.ohlcv-fields-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap; /* Will wrap on smaller screens */
+}
+.ohlcv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 145px;
+}
+
+.ohlcv-field label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #32245b;
+}
+.ohlcv-field input,
+.ohlcv-field select {
+  border: 1px solid #d1cadf;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 14px;
+  outline: none;
+  background: #f4f2fa;
+}
+.ohlcv-field input:focus,
+.ohlcv-field select:focus {
+  border-color: #6a0dad;
+}
+.ohlcv-actions-inline {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.ohlcv-field input:focus,
+.ohlcv-field select:focus {
+  border-color: #6a0dad;
+}
+
+.ohlcv-actions-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 15px;
+}
+
+.btn.ohlcv-btn {
+  background: #6a0dad;
+  color: #fff;
+  border-radius: 5px;
+  border: none;
+  padding: 7px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn.ohlcv-btn:hover {
+  background: #32245b;
+}
+.ohlcv-output {
+  max-height: 320px;
+  overflow: auto;
+  margin-bottom: 8px;
+}
+.ohlcv-table thead th {
+  position: sticky;
+  top: 0;
+  background: #faf8ff;
+  z-index: 2;
+}
+.ohlcv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+  border: 1px solid #e0daf6;
+  box-shadow: 0 0 5px #f2f1fa6d;
+  margin-bottom: 6px;
+}
+
+.ohlcv-table th,
+.ohlcv-table td {
+  border: 1px solid #efeafb;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.ohlcv-table th {
+  background: #faf8ff;
+  font-weight: 700;
+  color: #5b3798;
+}
+
+.ohlcv-table tbody tr:hover {
+  background: #f4ecff;
+}
+
+.ohlcv-explanation {
+  font-size: 13px;
+  color: #588;
+  background: #f7f7fa;
+  border-radius: 7px;
+  padding: 10px 15px;
+}
 
 @media (max-width: 1100px) {
+  .ohlcv-fields-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ohlcv-field.short-field {
+    flex: 1 1 100%;
+  }
+  .ohlcv-actions-inline {
+    justify-content: flex-start;
+  }
   .news-controls-bar {
     padding: 16px 8vw 12px 8vw;
     margin-bottom: 18px;
@@ -644,7 +804,8 @@ select.input-error-border {
     gap: 12px;
     justify-content: center;
   }
-  .nav-btn, .nav-btn-logout {
+  .nav-btn,
+  .nav-btn-logout {
     min-width: 100px;
     font-size: 1rem;
     flex: 1 1 45%;
@@ -719,16 +880,18 @@ select.input-error-border {
     gap: 12px;
     justify-content: center;
   }
-  .nav-btn, .nav-btn-logout {
+  .nav-btn,
+  .nav-btn-logout {
     min-width: 45%;
     font-size: 1rem;
     flex: 1 1 43%;
   }
   .chart-controls,
-  .ticker-autocomplete {    
+  .ticker-autocomplete {
     padding: 11px 2vw 8px 2vw;
   }
-  .card, .news-table.card {
+  .card,
+  .news-table.card {
     border-radius: 10px;
     padding: 10px 2vw 8px 2vw;
   }
@@ -748,18 +911,28 @@ select.input-error-border {
     padding: 17px 6vw 14px 6vw;
     max-width: 99vw;
   }
-  .modal-form label { font-size: 1.01rem; }
-  .modal-actions { flex-direction: column; gap: 8px; }
-  .modal-btn { width: 100%; }
+  .modal-form label {
+    font-size: 1.01rem;
+  }
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .modal-btn {
+    width: 100%;
+  }
   .comparison-tickers-container {
-   display: flex;
+    display: flex;
     gap: 8px;
   }
 }
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(20,32,50,0.38);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 32, 50, 0.38);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -768,7 +941,7 @@ select.input-error-border {
 .modal-dialog {
   background: #fff;
   border-radius: 15px;
-  box-shadow: 0 1px 6px rgba(44,62,80,0.08); 
+  box-shadow: 0 1px 6px rgba(44, 62, 80, 0.08);
   width: 98%;
   max-width: 400px;
   padding: 32px 24px 22px 24px;
@@ -776,8 +949,14 @@ select.input-error-border {
   animation: fadeInModal 0.23s;
 }
 @keyframes fadeInModal {
-  from {transform: translateY(-40px) scale(.98); opacity: 0;}
-  to {transform: none; opacity: 1;}
+  from {
+    transform: translateY(-40px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 .modal-form label {
   display: flex;
@@ -823,7 +1002,17 @@ input.input-error-border {
   cursor: pointer;
   transition: background 0.15s;
 }
-.cancel-btn { background: #f2f3f8; color: #1a2534; }
-.cancel-btn:hover { background: #ddd; }
-.submit-btn { background: #2196f3; color: #fff; }
-.submit-btn:hover { background: #1564c7; }
+.cancel-btn {
+  background: #f2f3f8;
+  color: #1a2534;
+}
+.cancel-btn:hover {
+  background: #ddd;
+}
+.submit-btn {
+  background: #2196f3;
+  color: #fff;
+}
+.submit-btn:hover {
+  background: #1564c7;
+}
