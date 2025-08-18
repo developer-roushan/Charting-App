@@ -262,9 +262,9 @@ a:hover {
   font-size: 15px;
   color: #21143b;
   padding: 24px;
-  display: flex;
+  display: none;
   align-items: center;
-  min-width: 350px;
+  min-width: 330px;
   height: 34px;
   box-sizing: border-box;
   transition: opacity 0.15s;
@@ -272,14 +272,15 @@ a:hover {
 }
 .chart-info-box[hidden] {
   display: flex !important;
-  visibility: hidden;
+  visibility: none;
+  display:  none;
   opacity: 0;
   pointer-events: none;
 }
 .chart-info-box {
-  min-width: 350px;
+  min-width: 330px;
   height: 34px;
-  display: flex;
+  display: none;
   align-items: center;
   visibility: hidden;
   opacity: 0;
@@ -287,7 +288,17 @@ a:hover {
 }
 .chart-info-box.active {
   visibility: visible;
+  display: flex; 
   opacity: 1;
+}
+#dotPlottingBox {
+  display: flex; 
+}
+#dotPlottingBox .control-group {
+  display: flex; 
+  align-items: center;
+  gap: 8px ;
+  min-width: 120px;
 }
 
 #ticker {

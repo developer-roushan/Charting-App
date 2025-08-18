@@ -13,4 +13,7 @@ router.get('/realtime-data', chartController.getRealtimeData);
 router.post('/clear-realtime-cache', chartController.clearRealtimeCache);
 router.get('/rtat', chartController.getRTATData);
 router.get('/realtime-tickData', chartController.getRealtimeTickData);
+router.get('/dividends', chartController.getDividends);
+router.get('/earnings', chartController.getEarnings);
+router.get('/insbuy', chartController.getInsiderBuy);
 module.exports = router;

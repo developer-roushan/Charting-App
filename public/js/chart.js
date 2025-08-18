@@ -9,6 +9,7 @@ let isNewsExpanded = false;
 let RTATData = [];
 let mainData = [];
 let compareDataArray = [];
+let dotMarkers = [];
 let renkoSettings = {
   type: "fixed",
   fixedBrickSize: 1.0,
@@ -345,7 +346,7 @@ async function fetchAndRenderChartData(options = {}) {
   };
 
   try {
-    const mainResp = await fetch(buildUrl(symbol).toString());    
+    const mainResp = await fetch(buildUrl(symbol).toString());
     const mainPayload = await mainResp.json();
     const mainRows = Array.isArray(mainPayload)
       ? mainPayload
@@ -451,6 +452,14 @@ async function fetchAndRenderChartData(options = {}) {
   }
 
   injectSummaryBoxes(summaryData, symbol, compareSymbols);
+  const lowerCaseType = chartType.toLowerCase();
+  if (
+    lowerCaseType === "line" ||
+    lowerCaseType === "area" ||
+    lowerCaseType === "baseline"
+  ) {
+    checkDotPlotting(symbol, startDate, endDate, finalData);
+  }
 }
 function isTradingDay(d) {
   const wd = d.getDay();
@@ -894,6 +903,7 @@ function toggleCompareInputs(chartType) {
   const compareContainer = document.querySelector(
     "#toolbarLeft .comparison-tickers-container"
   );
+  const dotPlot = document.getElementById("dotPlottingBox");
 
   const lowerCaseType = chartType.toLowerCase();
 
@@ -901,6 +911,15 @@ function toggleCompareInputs(chartType) {
     compareContainer.style.display = "flex";
   } else {
     compareContainer.style.display = "none";
+  }
+  if (
+    lowerCaseType === "line" ||
+    lowerCaseType === "area" ||
+    lowerCaseType === "baseline"
+  ) {
+    dotPlot.style.display = "flex";
+  } else {
+    dotPlot.style.display = "none";
   }
 }
 function computeHeikinAshi(ohlcData) {
@@ -1393,6 +1412,8 @@ function showChartInfoBox({
   rtatActivity,
 }) {
   const box = document.getElementById("chartInfoBox");
+  const dotPlot = document.getElementById("dotPlottingBox");
+  dotPlot.style.display = "none";
   box.classList.add("active");
   document.getElementById("infoTime").innerHTML =
     "<strong>Time:</strong> " + (timeString ?? "--");
@@ -1408,8 +1429,20 @@ function showChartInfoBox({
   } / A=${rtatActivity ?? "--"}`;
 }
 function hideChartInfoBox() {
-  const box = document.getElementById("chartInfoBox");
-  box.classList.remove("active");
+  const chartBox = document.getElementById("chartInfoBox");
+  const dotPlot = document.getElementById("dotPlottingBox");
+  const chartType = document.getElementById("chartType").value;
+
+  const lowerCaseType = chartType.toLowerCase();
+
+  chartBox.classList.remove("active");
+  if (
+    lowerCaseType === "line" ||
+    lowerCaseType === "area" ||
+    lowerCaseType === "baseline"
+  ) {
+    dotPlot.style.display = "flex";
+  }
 }
 function openOHLCVModal() {
   document.getElementById("ohlcvModal").style.display = "flex";
@@ -1421,35 +1454,36 @@ function clearOHLCVTable() {
   document.getElementById("ohlcvTableBody").innerHTML = "";
 }
 function formatDate(dtValue) {
-  let d
+  let d;
   if (typeof dtValue === "number") {
-    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue)
+    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue);
   } else if (!isNaN(dtValue) && dtValue.trim() !== "") {
-    const num = Number(dtValue)
-    d = new Date(num.toString().length === 10 ? num * 1000 : num)
+    const num = Number(dtValue);
+    d = new Date(num.toString().length === 10 ? num * 1000 : num);
   } else {
-    d = new Date(dtValue)
+    d = new Date(dtValue);
   }
-  return isNaN(d) ? "-" : d.toISOString().slice(0, 10)
+  return isNaN(d) ? "-" : d.toISOString().slice(0, 10);
 }
 function formatTime(dtValue) {
-  let d
+  let d;
   if (typeof dtValue === "number") {
-    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue)
+    d = new Date(dtValue.toString().length === 10 ? dtValue * 1000 : dtValue);
   } else if (!isNaN(dtValue) && dtValue.trim() !== "") {
-    const num = Number(dtValue)
-    d = new Date(num.toString().length === 10 ? num * 1000 : num)
+    const num = Number(dtValue);
+    d = new Date(num.toString().length === 10 ? num * 1000 : num);
   } else {
-    d = new Date(dtValue)
+    d = new Date(dtValue);
   }
-  return isNaN(d) ? "-" : d.toTimeString().slice(0, 5)
+  return isNaN(d) ? "-" : d.toTimeString().slice(0, 5);
 }
 function calculateVWVC(open, close, volume) {
-  return (Number(close) - Number(open)) * Number(volume)
+  return (Number(close) - Number(open)) * Number(volume);
 }
 function calculateRSI(closes, period = 14) {
   if (!Array.isArray(closes) || closes.length < period + 1) return null;
-  let gains = 0, losses = 0;
+  let gains = 0,
+    losses = 0;
   for (let i = 1; i <= period; i++) {
     const delta = Number(closes[i]) - Number(closes[i - 1]);
     if (delta > 0) gains += delta;
@@ -1457,7 +1491,7 @@ function calculateRSI(closes, period = 14) {
   }
   let avgGain = gains / period;
   let avgLoss = losses / period;
-  if (avgLoss === 0) return 100; 
+  if (avgLoss === 0) return 100;
 
   let rs = avgGain / avgLoss;
   let rsi = 100 - 100 / (1 + rs);
@@ -1482,11 +1516,14 @@ function calculateVSR(currentVolume, previousVolumes) {
 }
 function normalizeOHLCVData(raw) {
   const ts = raw.timestamp
-    ? (typeof raw.timestamp === "number" && raw.timestamp.toString().length === 10
-        ? raw.timestamp * 1000
-        : raw.timestamp)
-    : null
-  const dtStr = raw.datetime || (ts ? new Date(ts).toISOString().replace("T", " ").substring(0, 19) : null)
+    ? typeof raw.timestamp === "number" &&
+      raw.timestamp.toString().length === 10
+      ? raw.timestamp * 1000
+      : raw.timestamp
+    : null;
+  const dtStr =
+    raw.datetime ||
+    (ts ? new Date(ts).toISOString().replace("T", " ").substring(0, 19) : null);
   return {
     timestamp: ts,
     datetime: dtStr,
@@ -1500,28 +1537,33 @@ function normalizeOHLCVData(raw) {
     prevCloses: raw.prevCloses ?? [],
     vsr: raw.vsr ?? null,
     vwvc: raw.vwvc ?? null,
-    rsi: raw.rsi ?? null
-  }
+    rsi: raw.rsi ?? null,
+  };
 }
 function extractIndicators(data) {
-  let vwvc = data.vwvc
-  if (vwvc == null && data.open != null && data.close != null && data.volume != null) {
-    vwvc = calculateVWVC(data.open, data.close, data.volume)
+  let vwvc = data.vwvc;
+  if (
+    vwvc == null &&
+    data.open != null &&
+    data.close != null &&
+    data.volume != null
+  ) {
+    vwvc = calculateVWVC(data.open, data.close, data.volume);
   }
-  let vsr = data.vsr
+  let vsr = data.vsr;
   if (vsr == null && Array.isArray(data.prevVolumes) && data.volume != null) {
-    vsr = calculateVSR(data.volume, data.prevVolumes)
+    vsr = calculateVSR(data.volume, data.prevVolumes);
   }
-  let rsi = data.rsi?.value ?? data.rsi
+  let rsi = data.rsi?.value ?? data.rsi;
   if (rsi == null && Array.isArray(data.prevCloses)) {
-    rsi = calculateRSI(data.prevCloses, 14)
+    rsi = calculateRSI(data.prevCloses, 14);
   }
   console.log(data);
-  return { vsr, vwvc, rsi }
+  return { vsr, vwvc, rsi };
 }
 function renderOHLCVRow(data) {
-  const { vsr, vwvc, rsi } = extractIndicators(data)
-  const row = document.createElement("tr")
+  const { vsr, vwvc, rsi } = extractIndicators(data);
+  const row = document.createElement("tr");
   row.innerHTML = `
     <td>${formatDate(data.timestamp || data.date)}</td>
     <td>${formatTime(data.timestamp || data.date)}</td>
@@ -1534,31 +1576,38 @@ function renderOHLCVRow(data) {
     <td>${vsr != null ? vsr.toFixed(2) : "-"}</td>
     <td>${vwvc != null ? vwvc.toFixed(2) : "-"}</td>
     <td>${rsi != null ? Number(rsi).toFixed(2) : "-"}</td>
-  `
-  document.getElementById("ohlcvTableBody").appendChild(row)
+  `;
+  document.getElementById("ohlcvTableBody").appendChild(row);
 }
 async function generateOHLCVTable() {
-  const ticker = document.getElementById("ohlcv-ticker").value.trim().toUpperCase()
-  document.getElementById("ohlcvTableBody").innerHTML = ""
-  const fromStr = document.getElementById("ohlcv-date-from").value
-  const toStr = document.getElementById("ohlcv-date-to").value
-  const interval = document.getElementById("ohlcv-interval").value
-  const fromDate = new Date(fromStr)
-  const toDate = new Date(toStr)
-  const url = new URL("ohlc", window.location.origin + baseUrl)
-  url.searchParams.set("symbol", ticker)
-  url.searchParams.set("from", fromDate.toISOString())
-  url.searchParams.set("to", toDate.toISOString())
-  url.searchParams.set("interval", interval)
-  const res = await fetch(url)
-  const rawData = await res.json()
+  const ticker = document
+    .getElementById("ohlcv-ticker")
+    .value.trim()
+    .toUpperCase();
+  document.getElementById("ohlcvTableBody").innerHTML = "";
+  const fromStr = document.getElementById("ohlcv-date-from").value;
+  const toStr = document.getElementById("ohlcv-date-to").value;
+  const interval = document.getElementById("ohlcv-interval").value;
+  const fromDate = new Date(fromStr);
+  const toDate = new Date(toStr);
+  const url = new URL("ohlc", window.location.origin + baseUrl);
+  url.searchParams.set("symbol", ticker);
+  url.searchParams.set("from", fromDate.toISOString());
+  url.searchParams.set("to", toDate.toISOString());
+  url.searchParams.set("interval", interval);
+  const res = await fetch(url);
+  const rawData = await res.json();
   if (Array.isArray(rawData)) {
-    rawData.sort((a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date));
+    rawData.sort(
+      (a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date)
+    );
 
     rawData.forEach((bar, i) => {
-      const prevVolumes = i >= 14 ? rawData.slice(i - 14, i).map(b => b.volume) : [];
-      const prevCloses  = i >= 15 ? rawData.slice(i - 15, i + 1).map(b => b.close) : [];
-      const enriched    = { ...bar, prevVolumes, prevCloses };
+      const prevVolumes =
+        i >= 14 ? rawData.slice(i - 14, i).map((b) => b.volume) : [];
+      const prevCloses =
+        i >= 15 ? rawData.slice(i - 15, i + 1).map((b) => b.close) : [];
+      const enriched = { ...bar, prevVolumes, prevCloses };
       renderOHLCVRow(normalizeOHLCVData(enriched));
     });
   } else {
@@ -1566,21 +1615,168 @@ async function generateOHLCVTable() {
   }
 }
 async function getOHLCVRealTime() {
-  const ticker = document.getElementById("ohlcv-ticker").value.trim().toUpperCase()
-  document.getElementById("ohlcvTableBody").innerHTML = ""
-  const res = await fetch(`${baseUrl}realtime-tickData?symbol=${encodeURIComponent(ticker)}`)
-  const rawData = await res.json()
-if (Array.isArray(rawData)) {
-    rawData.sort((a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date));
+  const ticker = document
+    .getElementById("ohlcv-ticker")
+    .value.trim()
+    .toUpperCase();
+  document.getElementById("ohlcvTableBody").innerHTML = "";
+  const res = await fetch(
+    `${baseUrl}realtime-tickData?symbol=${encodeURIComponent(ticker)}`
+  );
+  const rawData = await res.json();
+  if (Array.isArray(rawData)) {
+    rawData.sort(
+      (a, b) => new Date(a.datetime || a.date) - new Date(b.datetime || b.date)
+    );
 
     rawData.forEach((bar, i) => {
-      const prevVolumes = i >= 14 ? rawData.slice(i - 14, i).map(b => b.volume) : [];
-      const prevCloses  = i >= 15 ? rawData.slice(i - 15, i + 1).map(b => b.close) : [];
-      const enriched    = { ...bar, prevVolumes, prevCloses };
+      const prevVolumes =
+        i >= 14 ? rawData.slice(i - 14, i).map((b) => b.volume) : [];
+      const prevCloses =
+        i >= 15 ? rawData.slice(i - 15, i + 1).map((b) => b.close) : [];
+      const enriched = { ...bar, prevVolumes, prevCloses };
       renderOHLCVRow(normalizeOHLCVData(enriched));
     });
   } else {
     renderOHLCVRow(normalizeOHLCVData(rawData));
   }
 }
+async function checkDotPlotting(symbol, startDate, endDate, finalData) {
+  const dividendChecked = document.getElementById(
+    "dividend-dot-plotting"
+  ).checked;
+  const earningsChecked = document.getElementById(
+    "earnings-dot-plotting"
+  ).checked;
+  const insBuyChecked = document.getElementById("insbuy-dot-plotting").checked;
+  const formattedStart = formatAPIDate(startDate);
+  const formattedEnd = formatAPIDate(endDate);
 
+  dotMarkers = [];
+
+  if (!symbol || (Array.isArray(symbol) && symbol.length !== 1)) return;
+
+  if (dividendChecked) {
+    const divUrl = `${baseUrl}dividends?symbol=${encodeURIComponent(
+      symbol
+    )}&from=${formattedStart}&to=${formattedEnd}`;
+    const divRes = await fetch(divUrl);
+    const divData = await divRes.json();
+    divData.forEach((item) => {
+      if (item.declarationDate)
+        plotDotOnChart(
+          item.declarationDate,
+          "black",
+          "Dividend Declaration",
+          finalData
+        );
+      if (item.paymentDate)
+        plotDotOnChart(item.paymentDate, "gray", "Dividend Payment", finalData);
+    });
+  }
+
+  if (earningsChecked) {
+    const earnUrl = `${baseUrl}earnings?symbol=${encodeURIComponent(
+      symbol
+    )}&from=${formattedStart}&to=${formattedEnd}`;
+    const earnRes = await fetch(earnUrl);
+    const earnData = await earnRes.json();
+
+    if (earnData.History) {
+      Object.values(earnData.History).forEach((item) => {
+        if (
+          item.reportDate &&
+          isBetween(item.reportDate, formattedStart, formattedEnd)
+        ) {
+          plotDotOnChart(
+            item.reportDate,
+            "blue",
+            "Earnings Release",
+            finalData
+          );
+        }
+      });
+    }
+
+    if (Array.isArray(earnData.Trend)) {
+      earnData.Trend.forEach((item) => {
+        if (
+          item.filingDate &&
+          isBetween(item.filingDate, formattedStart, formattedEnd)
+        ) {
+          plotDotOnChart(item.filingDate, "purple", "Filing Date", finalData);
+        }
+      });
+    }
+  }
+
+  if (insBuyChecked) {
+    const insUrl = `${baseUrl}insbuy?symbol=${encodeURIComponent(
+      symbol
+    )}&from=${formattedStart}&to=${formattedEnd}`;
+    const insRes = await fetch(insUrl);
+    const insData = await insRes.json();
+    console.log(insData);
+
+    Object.values(insData).forEach((item) => {
+      if (
+        item.transactionCode === "S" &&
+        item.transactionDate &&
+        isBetween(item.transactionDate, formattedStart, formattedEnd)
+      ) {
+        plotDotOnChart(
+          item.transactionDate,
+          "red",
+          "Insider Selling",
+          finalData
+        );
+      }
+      if (
+        item.transactionCode === "P" &&
+        item.transactionDate &&
+        isBetween(item.transactionDate, formattedStart, formattedEnd)
+      ) {
+        plotDotOnChart(
+          item.transactionDate,
+          "green",
+          "Insider Buyer",
+          finalData
+        );
+      }
+    });
+  }
+
+  series.setMarkers(dotMarkers);
+}
+function formatAPIDate(dateObj) {
+  const d = new Date(dateObj);
+  return d.toISOString().slice(0, 10);
+}
+function plotDotOnChart(dateStr, color, label, finalData) {
+  const eventDate = new Date(dateStr);
+  const eventStartSec = Math.floor(
+    new Date(
+      eventDate.getFullYear(),
+      eventDate.getMonth(),
+      eventDate.getDate()
+    ).getTime() / 1000
+  );
+
+  const ohlcvBar = finalData.find((bar) => {
+    return bar.time >= eventStartSec && bar.time < eventStartSec + 86400;
+  });
+
+  if (!ohlcvBar) return;
+
+  dotMarkers.push({
+    time: ohlcvBar.time,
+    position: "aboveBar",
+    color: color,
+    shape: "circle",
+    size: 1,
+  });
+}
+function isBetween(dateStr, start, end) {
+  const d = new Date(dateStr);
+  return d >= new Date(start) && d <= new Date(end);
+}

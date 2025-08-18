@@ -74,3 +74,21 @@ exports.getRealtimeTickData = async (req, res) => {
   const fullData = await chartService.fetchRealtimeTickData(symbol);
   res.json(fullData);
 };
+exports.getDividends = async (req, res) => {
+  const { symbol, from, to } = req.query;
+  if (!symbol) return res.status(400).json({ error: "Symbol required" });
+  const data = await chartService.fetchDividends(symbol, from, to);
+  res.json(data);
+};
+exports.getEarnings = async (req, res) => {
+  const { symbol, from, to } = req.query;
+  if (!symbol) return res.status(400).json({ error: "Symbol required" });
+  const data = await chartService.fetchEarnings(symbol, from, to);
+  res.json(data);
+};
+exports.getInsiderBuy = async (req, res) => {
+  const { symbol, from, to } = req.query;
+  if (!symbol) return res.status(400).json({ error: "Symbol required" });
+  const data = await chartService.fetchInsiderBuy(symbol, from, to);
+  res.json(data);
+};

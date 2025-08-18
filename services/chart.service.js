@@ -1,5 +1,6 @@
 require("dotenv").config();
 const axios = require("axios");
+const { Console } = require("console");
 const path = require("path");
 const fs = require("fs").promises;
 
@@ -17,22 +18,29 @@ function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const from = fromISO
     ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
     : "from_na";
-  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
+  const to = toISO
+    ? `to_${new Date(toISO).toISOString().split("T")[0]}`
+    : "to_na";
   const int = interval ? `interval_${interval}` : "interval_na";
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `${safeSymbol}_${from}_${to}_${int}.json`;
 }
-function generateNewsCacheFilename(tickers, fromISO, toISO) {
-  const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
-  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
-  const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
-  return `news_${safeTickers}_${from}_${to}.json`;
+function generateCacheFilenameTypes(type, tickers, fromISO, toISO) {
+  const from = fromISO
+    ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
+    : "from_na";
+  const to = toISO
+    ? `to_${new Date(toISO).toISOString().split("T")[0]}`
+    : "to_na";
+  const safeTickers = tickers
+    .map((t) => t.replace(/[^a-zA-Z0-9.-]/g, "_"))
+    .join("_");
+  return `${type}_${safeTickers}_${from}_${to}.json`;
 }
-function generateRTATCacheFilename(tickers, fromISO, toISO) {
-  const from = fromISO ? `from_${new Date(fromISO).toISOString().split("T")[0]}` : "from_na";
-  const to = toISO ? `to_${new Date(toISO).toISOString().split("T")[0]}` : "to_na";
-  const safeTickers = tickers.map(t => t.replace(/[^a-zA-Z0-9.-]/g, "_")).join("_");
-  return `rtat_${safeTickers}_${from}_${to}.json`;
+function generateRealtimeCacheFilename(symbol, interval) {
+  const date = new Date().toISOString().split("T")[0];
+  const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
+  return `realtime_${safeSymbol}_${date}_${interval}.json`;
 }
 exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   await ensureCacheDir();
@@ -97,7 +105,7 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
 exports.fetchNews = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
-  const filename = generateNewsCacheFilename(tickers, fromISO, toISO);
+  const filename = generateCacheFilenameTypes("news", tickers, fromISO, toISO);
   const filePath = path.join(cacheDir, filename);
 
   try {
@@ -105,7 +113,6 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
     return JSON.parse(cachedData);
   } catch (err) {
     if (err.code !== "ENOENT") {
-      // Unexpected error, handle/log
       console.error("Error reading news cache:", err);
     }
   }
@@ -157,25 +164,22 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
         allNews = allNews.concat(filtered);
       }
     } catch (error) {
-      // Log or ignore individual ticker errors
       console.error(`Error fetching news for ticker ${ticker}:`, error.message);
     }
   }
 
-  // Sort news by descending date
   allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   try {
     await fs.writeFile(filePath, JSON.stringify(allNews, null, 2), "utf-8");
-  } catch (writeErr) {
-  }
+  } catch (writeErr) {}
 
   return allNews;
 };
 exports.fetchRTAT = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
-  const filename = generateRTATCacheFilename(tickers, fromISO, toISO);
+  const filename = generateCacheFilenameTypes("rtat",tickers, fromISO, toISO);
   const filePath = path.join(cacheDir, filename);
 
   try {
@@ -183,7 +187,6 @@ exports.fetchRTAT = async (tickers, fromISO, toISO) => {
     return JSON.parse(cachedData);
   } catch (err) {
     if (err.code !== "ENOENT") {
-      // Unexpected error reading cache
       console.error("Error reading RTAT cache:", err);
     }
   }
@@ -212,7 +215,6 @@ exports.fetchRTAT = async (tickers, fromISO, toISO) => {
   try {
     await fs.writeFile(filePath, JSON.stringify(allData, null, 2), "utf-8");
   } catch (writeErr) {
-    // Ignore cache write errors
   }
 
   return allData;
@@ -289,11 +291,6 @@ exports.clearCacheFiles = async () => {
     throw new Error("Failed to clear cache files due to a server error.");
   }
 };
-function generateRealtimeCacheFilename(symbol, interval) {
-  const date = new Date().toISOString().split('T')[0];
-  const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
-  return `realtime_${safeSymbol}_${date}_${interval}.json`;
-}
 exports.fetchRealtimeData = async (symbol, interval) => {
   await ensureCacheDir();
   const filename = generateRealtimeCacheFilename(symbol, interval);
@@ -303,16 +300,22 @@ exports.fetchRealtimeData = async (symbol, interval) => {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
   } catch (err) {
-    if (err.code !== "ENOENT") console.error("Error reading realtime cache:", err);
+    if (err.code !== "ENOENT")
+      console.error("Error reading realtime cache:", err);
   }
 
   const intervalMap = {
-    '1min': '1m', '1m': '1m',
-    '15min': '15m', '15m': '15m',
-    '30min': '30m', '30m': '30m',
-    '60min': '1h', '60m': '1h', '1h': '1h'
+    "1min": "1m",
+    "1m": "1m",
+    "15min": "15m",
+    "15m": "15m",
+    "30min": "30m",
+    "30m": "30m",
+    "60min": "1h",
+    "60m": "1h",
+    "1h": "1h",
   };
-  const apiInterval = intervalMap[(interval || '').toLowerCase()] || '1m';
+  const apiInterval = intervalMap[(interval || "").toLowerCase()] || "1m";
 
   const now = Math.floor(Date.now() / 1000);
   const today4AM = new Date();
@@ -324,15 +327,22 @@ exports.fetchRealtimeData = async (symbol, interval) => {
     fmt: "json",
     interval: apiInterval,
     from: String(fromTs),
-    to: String(now)
+    to: String(now),
   });
-  const url = `${baseUrl}intraday/${encodeURIComponent(symbol)}?${params.toString()}`;
+  const url = `${baseUrl}intraday/${encodeURIComponent(
+    symbol
+  )}?${params.toString()}`;
   try {
     const resp = await axios.get(url);
     const raw = Array.isArray(resp.data) ? resp.data : [];
-    const data = raw.filter(d =>
-      d.datetime && !isNaN(d.open) && !isNaN(d.high) && !isNaN(d.low) &&
-      !isNaN(d.close) && !isNaN(d.volume)
+    const data = raw.filter(
+      (d) =>
+        d.datetime &&
+        !isNaN(d.open) &&
+        !isNaN(d.high) &&
+        !isNaN(d.low) &&
+        !isNaN(d.close) &&
+        !isNaN(d.volume)
     );
     if (data.length > 0) {
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
@@ -344,18 +354,110 @@ exports.fetchRealtimeData = async (symbol, interval) => {
   }
 };
 exports.clearRealtimeCache = async (symbol) => {
-  const filename = generateRealtimeCacheFilename(symbol, '1min');
+  const filename = generateRealtimeCacheFilename(symbol, "1min");
   const filePath = path.join(cacheDir, filename);
   try {
     await fs.unlink(filePath);
   } catch (err) {
-    if (err.code !== "ENOENT") console.error("Error clearing realtime cache:", err);
+    if (err.code !== "ENOENT")
+      console.error("Error clearing realtime cache:", err);
   }
 };
 exports.fetchRealtimeTickData = async (symbol) => {
- const url = `${baseUrl}real-time/${encodeURIComponent(symbol)}?api_token=${apiKey}&fmt=json`;
+  await ensureCacheDir();
+
+  const filename = generateRealtimeCacheFilename(symbol, "realtimeTickData");
+  const filePath = path.join(cacheDir, filename);
+
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("Error reading news cache:", err);
+    }
+  }
+
+  const url = `${baseUrl}real-time/${encodeURIComponent(
+    symbol
+  )}?api_token=${apiKey}&fmt=json`;
   const res = await fetch(url);
   const data = await res.json();
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } catch (writeErr) {}
   return data;
 };
+exports.fetchDividends = async (symbol, from, to) => {
+  await ensureCacheDir();
 
+  const filename = generateCacheFilenameTypes("dividends",symbol, from, to);
+  const filePath = path.join(cacheDir, filename);
+
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("Error reading news cache:", err);
+    }
+  }
+  const url = `${baseUrl}div/${encodeURIComponent(
+    symbol
+  )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
+  const res = await fetch(url);
+  const data = await res.json();
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } catch (writeErr) {}
+  return data;
+};
+exports.fetchEarnings = async (symbol, from, to) => {
+  await ensureCacheDir();
+
+  const filename = generateCacheFilenameTypes("earnings",symbol, from, to);
+  const filePath = path.join(cacheDir, filename);
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("Error reading news cache:", err);
+    }
+  }
+  const url = `${baseUrl}fundamentals/${encodeURIComponent(
+    symbol
+  )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
+  const res = await fetch(url);
+  console.log("Fetching earnings data from:", url);
+  const data = await res.json();
+    try {
+    await fs.writeFile(filePath, JSON.stringify(data.Earnings, null, 2), "utf-8");
+  } catch (writeErr) {}
+
+  return data.Earnings || [];
+};
+exports.fetchInsiderBuy = async (symbol, from, to) => {
+  await ensureCacheDir();
+
+  const filename = generateCacheFilenameTypes("insiderBuy",symbol, from, to);
+  const filePath = path.join(cacheDir, filename);
+  try {
+    const cachedData = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(cachedData);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("Error reading news cache:", err);
+    }
+  }
+
+  const url = `${baseUrl}fundamentals/${encodeURIComponent(
+    symbol
+  )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
+  const res = await fetch(url);
+  const data = await res.json();
+    try {
+    await fs.writeFile(filePath, JSON.stringify(data.InsiderTransactions, null, 2), "utf-8");
+  } catch (writeErr) {}
+  return data.InsiderTransactions || [];
+};
