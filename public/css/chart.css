@@ -470,8 +470,6 @@ input.disabled {
   cursor: not-allowed;
   color: #999;
 }
-
-/* EXPANDED CHART MODE */
 .chart-area.card.chart-expanded {
   position: fixed;
   top: 60px;
@@ -685,7 +683,7 @@ select.input-error-border {
   display: flex;
   gap: 14px;
   align-items: flex-end;
-  flex-wrap: wrap; /* Will wrap on smaller screens */
+  flex-wrap: wrap; 
 }
 .ohlcv-field {
   display: flex;

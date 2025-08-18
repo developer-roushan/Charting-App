@@ -1,175 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <title>Real-Time Chart</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/css/realtime.css" />
-  <link rel="stylesheet" href="/css/chart.css" />
-  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
-</head>
-<body>
-  <header class="navbar">
-    <div class="navbar-group">
-      <select id="realtime-interval">
-        <option value="1m">1min</option>
-        <option value="15m">15min</option>
-        <option value="30m">30min</option>
-        <option value="1h">60min</option>
-      </select>
-      <select id="realtime-chartType">
-        <option value="area">Area Chart</option>
-        <option value="line">Line Chart</option>
-        <option value="candlestick">Candlestick</option>
-        <option value="baseline">Baseline</option>
-        <option value="heikin">Heikin Ashi</option>
-        <option value="renko">Renko</option>
-      </select>
-      <button class="nav-btn" id="realtime-renkoSettingBtn" onclick="openRenkoSettingsModal()">
-        Renko settings
-      </button>
-      <button class="nav-btn" id="realtime-generateChartBtn" onclick="generateRealtimeChart();">
-        Generate chart
-      </button>
-      <button onclick="Logout()" class="nav-btn nav-btn-logout">
-        Exit and Clear
-      </button>
-    </div>
-  </header>
-
-  <div class="dashboard-top">
-    <div class="chart-area card">
-      <div class="chart-toolbar chart-toolbar-flex">
-        <div class="toolbar-left" id="realtime-toolbarLeft">
-          <div class="comparison-tickers-container">
-            <div class="form-group">
-              <label>
-                Ticker 1:
-                <div class="ticker-autocomplete">
-                  <input
-                    type="text"
-                    id="realtime-compare-ticker-1"
-                    placeholder="Enter Ticker(s)"
-                    autocomplete="off"
-                  />
-                  <input type="hidden" id="realtime-compare-ticker-code-1" />
-                  <ul id="realtime-compare-ticker-list-1" class="ticker-list"></ul>
-                </div>
-              </label>
-            </div>
-            <div class="form-group">
-              <label>
-                Ticker 2:
-                <div class="ticker-autocomplete">
-                  <input
-                    type="text"
-                    id="realtime-compare-ticker-2"
-                    placeholder="Enter Ticker(s)"
-                    autocomplete="off"
-                  />
-                  <input type="hidden" id="realtime-compare-ticker-code-2" />
-                  <ul id="realtime-compare-ticker-list-2" class="ticker-list"></ul>
-                </div>
-              </label>
-              <input type="hidden" id="realtime-main-symbol" />
-
-            </div>
-          </div>
-        </div>
-        <div id="realtime-chartInfoBox" class="chart-info-box">
-          <div id="realtime-infoTime"></div>
-          <div id="realtime-infoPrice"></div>
-          <div id="realtime-infoVolume"></div>
-          <div id="realtime-infoVWAP"></div>
-          <div id="realtime-infoRTAT"></div>
-        </div>
+  <head>
+    <title>Real-Time Chart</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/css/realtime.css" />
+    <link rel="stylesheet" href="/css/chart.css" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="navbar-group">
+        <select id="realtime-interval">
+          <option value="1m">1min</option>
+          <option value="15m">15min</option>
+          <option value="30m">30min</option>
+          <option value="1h">60min</option>
+        </select>
+        <select id="realtime-chartType">
+          <option value="area">Area Chart</option>
+          <option value="line">Line Chart</option>
+          <option value="candlestick">Candlestick</option>
+          <option value="baseline">Baseline</option>
+          <option value="heikin">Heikin Ashi</option>
+          <option value="renko">Renko</option>
+        </select>
         <button
-          id="realtime-expandChartBtn"
-          class="expand-btn"
-          title="Expand/Shrink" 
-          style="display: none;"         
+          class="nav-btn"
+          id="realtime-renkoSettingBtn"
+          onclick="openRenkoSettingsModal()"
         >
-          <span id="realtime-expandIcon"  class="material-icons" >fullscreen</span>
-          
+          Renko settings
+        </button>
+        <button
+          class="nav-btn"
+          id="realtime-generateChartBtn"
+          onclick="generateRealtimeChart();"
+        >
+          Generate chart
+        </button>
+        <button onclick="Logout()" class="nav-btn nav-btn-logout">
+          Exit and Clear
         </button>
       </div>
-      <div id="realtime-chartDiv"></div>
-    </div>
-    <aside class="side-panel card">
-      <div class="side-custom-grid">
-        <div class="grid-row row1">
-          <div class="grid-cell" id="realtime-mainBox-core"></div>
+    </header>
+
+    <div class="dashboard-top">
+      <div class="chart-area card">
+        <div class="chart-toolbar chart-toolbar-flex">
+          <div class="toolbar-left" id="realtime-toolbarLeft">
+            <div class="comparison-tickers-container">
+              <div class="form-group">
+                <label>
+                  Ticker 1:
+                  <div class="ticker-autocomplete">
+                    <input
+                      type="text"
+                      id="realtime-compare-ticker-1"
+                      placeholder="Enter Ticker(s)"
+                      autocomplete="off"
+                    />
+                    <input type="hidden" id="realtime-compare-ticker-code-1" />
+                    <ul
+                      id="realtime-compare-ticker-list-1"
+                      class="ticker-list"
+                    ></ul>
+                  </div>
+                </label>
+              </div>
+              <div class="form-group">
+                <label>
+                  Ticker 2:
+                  <div class="ticker-autocomplete">
+                    <input
+                      type="text"
+                      id="realtime-compare-ticker-2"
+                      placeholder="Enter Ticker(s)"
+                      autocomplete="off"
+                    />
+                    <input type="hidden" id="realtime-compare-ticker-code-2" />
+                    <ul
+                      id="realtime-compare-ticker-list-2"
+                      class="ticker-list"
+                    ></ul>
+                  </div>
+                </label>
+                <input type="hidden" id="realtime-main-symbol" />
+              </div>
+            </div>
+          </div>
+          <div id="realtime-chartInfoBox" class="chart-info-box">
+            <div id="realtime-infoTime"></div>
+            <div id="realtime-infoPrice"></div>
+            <div id="realtime-infoVolume"></div>
+            <div id="realtime-infoVWAP"></div>
+            <div id="realtime-infoRTAT"></div>
+          </div>
+          <button
+            id="realtime-expandChartBtn"
+            class="expand-btn"
+            title="Expand/Shrink"
+            style="display: none"
+          >
+            <span id="realtime-expandIcon" class="material-icons"
+              >fullscreen</span
+            >
+          </button>
         </div>
-        <div class="grid-row row2">
-          <div class="grid-cell" id="realtime-compareBox1-core"></div>
-        </div>
-        <div class="grid-row row3">
-          <div class="grid-cell" id="realtime-compareBox2-core"></div>
-        </div>
-        <div class="grid-row row4">
-          <div class="grid-cell" id="realtime-mainBox-4w52w"></div>
-          <div class="grid-cell" id="realtime-compareBox1-4w52w"></div>
-          <div class="grid-cell" id="realtime-compareBox2-4w52w"></div>
-        </div>
-        <div class="grid-row row5">
-          <div class="grid-cell" id="realtime-mainBox-rtat"></div>
-          <div class="grid-cell" id="realtime-compareBox1-rtat"></div>
-          <div class="grid-cell" id="realtime-compareBox2-rtat"></div>
-        </div>
-        <div class="grid-row row6">
-          <div class="grid-cell" id="realtime-mainBox-bias"></div>
-          <div class="grid-cell" id="realtime-compareBox1-bias"></div>
-          <div class="grid-cell" id="realtime-compareBox2-bias"></div>
-        </div>
+        <div id="realtime-chartDiv"></div>
       </div>
-    </aside>
-  </div>
-
-
-  <div class="on-chart-labels">
-    <div>High: <span id="dayHigh"></span></div>
-    <div>Low: <span id="dayLow"></span></div>
-    <div>Avg Price: <span id="dayAvg"></span></div>
-  </div>
-
-  <div id="realtime-renkoSettingsModal" class="modal" style="display: none">
-    <div class="modal-content">
-      <span class="close" onclick="closeRenkoSettingsModal()">&times;</span>
-      <h2>Renko Settings</h2>
-      <form id="realtime-renkoSettingsForm">
-        <label>
-          <input type="radio" name="renkoType" value="fixed" checked /> Fixed (Traditional)
-        </label>
-        <div id="realtime-fixedSettings" style="display: block">
-          <label>
-            Brick Size:
-            <input type="number" id="realtime-fixedBrickSize" value="1.0" step="0.1" min="0.1" />
-          </label>
+      <aside class="side-panel card">
+        <div class="side-custom-grid">
+          <div class="grid-row row1">
+            <div class="grid-cell" id="realtime-mainBox-core"></div>
+          </div>
+          <div class="grid-row row2">
+            <div class="grid-cell" id="realtime-compareBox1-core"></div>
+          </div>
+          <div class="grid-row row3">
+            <div class="grid-cell" id="realtime-compareBox2-core"></div>
+          </div>
+          <div class="grid-row row4">
+            <div class="grid-cell" id="realtime-mainBox-4w52w"></div>
+            <div class="grid-cell" id="realtime-compareBox1-4w52w"></div>
+            <div class="grid-cell" id="realtime-compareBox2-4w52w"></div>
+          </div>
+          <div class="grid-row row5">
+            <div class="grid-cell" id="realtime-mainBox-rtat"></div>
+            <div class="grid-cell" id="realtime-compareBox1-rtat"></div>
+            <div class="grid-cell" id="realtime-compareBox2-rtat"></div>
+          </div>
+          <div class="grid-row row6">
+            <div class="grid-cell" id="realtime-mainBox-bias"></div>
+            <div class="grid-cell" id="realtime-compareBox1-bias"></div>
+            <div class="grid-cell" id="realtime-compareBox2-bias"></div>
+          </div>
         </div>
-        <label>
-          <input type="radio" name="renkoType" value="atr" /> ATR Based
-        </label>
-        <div id="realtime-atrSettings" style="display: none">
-          <label>
-            ATR Period:
-            <input type="number" id="realtime-atrPeriod" value="14" min="1" />
-          </label>
-        </div>
-        <label>
-          <input type="radio" name="renkoType" value="percentage" /> Percentage
-        </label>
-        <div id="realtime-percentageSettings" style="display: none">
-          <label>
-            Percentage:
-            <input type="number" id="realtime-percentageValue" value="1" step="0.1" min="0.1" />
-          </label>
-        </div>
-        <button type="button" onclick="saveRenkoSettings()">Save</button>
-      </form>
+      </aside>
     </div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="/js/realtime.js"></script>
-</body>
+
+    <div class="on-chart-labels">
+      <div>High: <span id="dayHigh"></span></div>
+      <div>Low: <span id="dayLow"></span></div>
+      <div>Avg Price: <span id="dayAvg"></span></div>
+    </div>
+
+    <div id="realtime-renkoSettingsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close" onclick="closeRenkoSettingsModal()">&times;</span>
+        <h2>Renko Settings</h2>
+        <form id="realtime-renkoSettingsForm">
+          <label>
+            <input type="radio" name="renkoType" value="fixed" checked /> Fixed
+            (Traditional)
+          </label>
+          <div id="realtime-fixedSettings" style="display: block">
+            <label>
+              Brick Size:
+              <input
+                type="number"
+                id="realtime-fixedBrickSize"
+                value="1.0"
+                step="0.1"
+                min="0.1"
+              />
+            </label>
+          </div>
+          <label>
+            <input type="radio" name="renkoType" value="atr" /> ATR Based
+          </label>
+          <div id="realtime-atrSettings" style="display: none">
+            <label>
+              ATR Period:
+              <input type="number" id="realtime-atrPeriod" value="14" min="1" />
+            </label>
+          </div>
+          <label>
+            <input type="radio" name="renkoType" value="percentage" />
+            Percentage
+          </label>
+          <div id="realtime-percentageSettings" style="display: none">
+            <label>
+              Percentage:
+              <input
+                type="number"
+                id="realtime-percentageValue"
+                value="1"
+                step="0.1"
+                min="0.1"
+              />
+            </label>
+          </div>
+          <button type="button" onclick="saveRenkoSettings()">Save</button>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/js/realtime.js"></script>
+  </body>
 </html>

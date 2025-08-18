@@ -377,7 +377,6 @@ function Logout() {
     window.location.href = "/chart"; 
   }
 }
-
 function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }

@@ -14,6 +14,13 @@ const cacheDir = path.join(__dirname, "..", "data", "cache");
 async function ensureCacheDir() {
   await fs.mkdir(cacheDir, { recursive: true });
 }
+async function saveTickerData(data) {
+  await fs.writeFile(tickerFilePath, JSON.stringify(data, null, 2), "utf-8");
+}
+async function readTickerData() {
+  const raw = await fs.readFile(tickerFilePath, "utf-8");
+  return JSON.parse(raw);
+}
 function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const from = fromISO
     ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
@@ -32,9 +39,7 @@ function generateCacheFilenameTypes(type, tickers, fromISO, toISO) {
   const to = toISO
     ? `to_${new Date(toISO).toISOString().split("T")[0]}`
     : "to_na";
-  const safeTickers = tickers
-    .map((t) => t.replace(/[^a-zA-Z0-9.-]/g, "_"))
-    .join("_");
+  const safeTickers = tickers.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `${type}_${safeTickers}_${from}_${to}.json`;
 }
 function generateRealtimeCacheFilename(symbol, interval) {
@@ -52,9 +57,7 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
   } catch (error) {
-    if (error.code !== "ENOENT") {
-      console.error("Error reading OHLC cache file:", error);
-    }
+    res.status(500).json({ success: false, message: error.message });
   }
 
   const params = new URLSearchParams({
@@ -78,7 +81,6 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   try {
     const resp = await axios.get(url);
     const raw = Array.isArray(resp.data) ? resp.data : [];
-    // Filter valid data points
     const data = raw.filter(
       (d) =>
         d.datetime &&
@@ -92,11 +94,8 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
     if (data.length > 0) {
       try {
         await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-      } catch (writeError) {
-        // Log or ignore write errors
-      }
+      } catch (writeError) {}
     }
-
     return data;
   } catch (err) {
     throw err;
@@ -111,10 +110,8 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading news cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 
   const publicationDomains = {
@@ -163,9 +160,7 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
 
         allNews = allNews.concat(filtered);
       }
-    } catch (error) {
-      console.error(`Error fetching news for ticker ${ticker}:`, error.message);
-    }
+    } catch (error) {}
   }
 
   allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -179,16 +174,14 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
 exports.fetchRTAT = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
-  const filename = generateCacheFilenameTypes("rtat",tickers, fromISO, toISO);
+  const filename = generateCacheFilenameTypes("rtat", tickers, fromISO, toISO);
   const filePath = path.join(cacheDir, filename);
 
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading RTAT cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 
   let allData = {};
@@ -206,16 +199,12 @@ exports.fetchRTAT = async (tickers, fromISO, toISO) => {
       }));
 
       allData[ticker] = perDay;
-    } catch (error) {
-      console.error(`Error fetching RTAT for ${ticker}:`, error.message);
-      allData[ticker] = [];
-    }
+    } catch (error) {}
   }
 
   try {
     await fs.writeFile(filePath, JSON.stringify(allData, null, 2), "utf-8");
-  } catch (writeErr) {
-  }
+  } catch (writeErr) {}
 
   return allData;
 };
@@ -233,13 +222,6 @@ exports.fetchTicker = async () => {
     return await exports.fetchAndSaveTicker();
   }
 };
-async function saveTickerData(data) {
-  await fs.writeFile(tickerFilePath, JSON.stringify(data, null, 2), "utf-8");
-}
-async function readTickerData() {
-  const raw = await fs.readFile(tickerFilePath, "utf-8");
-  return JSON.parse(raw);
-}
 exports.changePassword = async (oldPass, newPass) => {
   const envPath = path.resolve(".env");
   const currentPassword = process.env.PASSWORD;
@@ -272,11 +254,7 @@ exports.changePassword = async (oldPass, newPass) => {
     await fs.writeFile(envPath, lines.join("\n") + "\n", "utf-8");
     return true;
   } catch (error) {
-    if (error.code === "ENOENT") {
-      await fs.writeFile(envPath, `PASSWORD=${newPass}\n`, "utf-8");
-      return true;
-    }
-    return false;
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 exports.clearCacheFiles = async () => {
@@ -288,7 +266,7 @@ exports.clearCacheFiles = async () => {
       message: "Successfully cleared all cached history.",
     };
   } catch (error) {
-    throw new Error("Failed to clear cache files due to a server error.");
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 exports.fetchRealtimeData = async (symbol, interval) => {
@@ -299,9 +277,8 @@ exports.fetchRealtimeData = async (symbol, interval) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT")
-      console.error("Error reading realtime cache:", err);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 
   const intervalMap = {
@@ -348,20 +325,14 @@ exports.fetchRealtimeData = async (symbol, interval) => {
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
     }
     return data;
-  } catch (err) {
-    console.error("Error fetching realtime data:", err.message || err);
-    return [];
-  }
+  } catch (err) {}
 };
 exports.clearRealtimeCache = async (symbol) => {
   const filename = generateRealtimeCacheFilename(symbol, "1min");
   const filePath = path.join(cacheDir, filename);
   try {
     await fs.unlink(filePath);
-  } catch (err) {
-    if (err.code !== "ENOENT")
-      console.error("Error clearing realtime cache:", err);
-  }
+  } catch (err) {}
 };
 exports.fetchRealtimeTickData = async (symbol) => {
   await ensureCacheDir();
@@ -372,10 +343,8 @@ exports.fetchRealtimeTickData = async (symbol) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading news cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 
   const url = `${baseUrl}real-time/${encodeURIComponent(
@@ -391,16 +360,14 @@ exports.fetchRealtimeTickData = async (symbol) => {
 exports.fetchDividends = async (symbol, from, to) => {
   await ensureCacheDir();
 
-  const filename = generateCacheFilenameTypes("dividends",symbol, from, to);
+  const filename = generateCacheFilenameTypes("dividends", symbol, from, to);
   const filePath = path.join(cacheDir, filename);
 
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading news cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
   const url = `${baseUrl}div/${encodeURIComponent(
     symbol
@@ -415,24 +382,25 @@ exports.fetchDividends = async (symbol, from, to) => {
 exports.fetchEarnings = async (symbol, from, to) => {
   await ensureCacheDir();
 
-  const filename = generateCacheFilenameTypes("earnings",symbol, from, to);
+  const filename = generateCacheFilenameTypes("earnings", symbol, from, to);
   const filePath = path.join(cacheDir, filename);
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading news cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
   const url = `${baseUrl}fundamentals/${encodeURIComponent(
     symbol
   )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
   const res = await fetch(url);
-  console.log("Fetching earnings data from:", url);
   const data = await res.json();
-    try {
-    await fs.writeFile(filePath, JSON.stringify(data.Earnings, null, 2), "utf-8");
+  try {
+    await fs.writeFile(
+      filePath,
+      JSON.stringify(data.Earnings, null, 2),
+      "utf-8"
+    );
   } catch (writeErr) {}
 
   return data.Earnings || [];
@@ -440,15 +408,13 @@ exports.fetchEarnings = async (symbol, from, to) => {
 exports.fetchInsiderBuy = async (symbol, from, to) => {
   await ensureCacheDir();
 
-  const filename = generateCacheFilenameTypes("insiderBuy",symbol, from, to);
+  const filename = generateCacheFilenameTypes("insiderBuy", symbol, from, to);
   const filePath = path.join(cacheDir, filename);
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("Error reading news cache:", err);
-    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 
   const url = `${baseUrl}fundamentals/${encodeURIComponent(
@@ -456,8 +422,12 @@ exports.fetchInsiderBuy = async (symbol, from, to) => {
   )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
   const res = await fetch(url);
   const data = await res.json();
-    try {
-    await fs.writeFile(filePath, JSON.stringify(data.InsiderTransactions, null, 2), "utf-8");
+  try {
+    await fs.writeFile(
+      filePath,
+      JSON.stringify(data.InsiderTransactions, null, 2),
+      "utf-8"
+    );
   } catch (writeErr) {}
   return data.InsiderTransactions || [];
 };

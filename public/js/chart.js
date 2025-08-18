@@ -1328,7 +1328,7 @@ function calculateSummary(ohlcData, rtatData) {
 
     ohlcData.forEach((bar) => {
       const d = new Date(bar.time * 1000);
-      const dateKey = d.toISOString().slice(0, 10); // e.g., '2025-08-01'
+      const dateKey = d.toISOString().slice(0, 10); 
       const h = d.getUTCHours();
 
       let segmentKey = null;
@@ -1558,7 +1558,6 @@ function extractIndicators(data) {
   if (rsi == null && Array.isArray(data.prevCloses)) {
     rsi = calculateRSI(data.prevCloses, 14);
   }
-  console.log(data);
   return { vsr, vwvc, rsi };
 }
 function renderOHLCVRow(data) {
@@ -1716,7 +1715,6 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
     )}&from=${formattedStart}&to=${formattedEnd}`;
     const insRes = await fetch(insUrl);
     const insData = await insRes.json();
-    console.log(insData);
 
     Object.values(insData).forEach((item) => {
       if (
