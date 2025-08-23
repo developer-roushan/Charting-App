@@ -601,13 +601,23 @@ input.disabled {
   margin: 0 !important;
   border-radius: 0 !important;
   background: #fff;
-  padding: 34px 3vw 24px 3vw !important;
   box-shadow: 0 0 50px rgba(60, 60, 80, 0.13);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   overflow: auto;
   transition: all 0.22s;
+  overflow-y: auto;
+}
+.news-table th {
+  position: sticky;
+  top: 0;
+  background: #f9f9f9;
+  z-index: 2;
+}
+.news-table.card.news-expanded > .table-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .side-panel.card {
@@ -650,7 +660,7 @@ input.disabled {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 2px 18px rgba(0, 0, 0, 0.1);
-  padding: 16px 24px;
+  padding: 0px 24px;
   width: 100%;
   max-width: 1600px;
   margin: 0 auto 40px auto;
