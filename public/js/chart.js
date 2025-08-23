@@ -10,6 +10,9 @@ let RTATData = [];
 let mainData = [];
 let compareDataArray = [];
 let dotMarkers = [];
+const modal = document.getElementById("dotInfoModal");
+const modalContent = document.getElementById("dotInfoContent");
+const closeBtn = document.getElementById("closeDotInfo");
 let renkoSettings = {
   type: "fixed",
   fixedBrickSize: 1.0,
@@ -26,6 +29,9 @@ async function init() {
   setupTicker();
   chartExpandSrink();
   newsExpandSrink();
+  closeBtn.onclick = () => {
+    modal.style.display = "none";
+  };
 }
 function setMaxDateTime() {
   const now = new Date();
@@ -61,7 +67,6 @@ function setupChart() {
   if (window.chart) {
     window.chart.remove();
   }
-
   chart = LightweightCharts.createChart(chartContainer, {
     layout: {
       textColor: "black",
@@ -72,7 +77,6 @@ function setupChart() {
     handleScale: false,
     handleScroll: false,
   });
-
   window.addEventListener(
     "resize",
     function resizeChartHandler() {
@@ -85,11 +89,9 @@ function setupChart() {
     },
     { passive: true }
   );
-
   document.querySelectorAll('input[name="renkoType"]').forEach((radio) => {
     radio.addEventListener("change", (e) => toggleRenkoFields(e.target.value));
   });
-
   window.onclick = function (event) {
     const modal = document.getElementById("renkoSettingsModal");
     if (event.target === modal) {
@@ -155,6 +157,44 @@ function setupChart() {
       rtatSentiment,
       rtatActivity,
     });
+  });
+  chart.subscribeClick((param) => {
+    if (!param.time || !param.point) {
+      modal.style.display = "none";
+      return;
+    }
+
+    const clickedTime =
+      typeof param.time === "string"
+        ? Math.floor(new Date(param.time).getTime() / 1000)
+        : param.time;
+
+    const matchingMarkers = dotMarkers.filter(
+      (m) => Math.abs(m.time - clickedTime) <= 86400
+    );
+
+    if (!matchingMarkers.length) {
+      modal.style.display = "none";
+      return;
+    }
+
+    let html = "";
+    matchingMarkers.forEach((marker, idx) => {
+      const data = marker.data || {};
+      html += `<div style="border-bottom:1px solid #ccc; margin-bottom: 12px; padding-bottom: 8px;">
+      <h4 style ="margin:0;">${
+        data.label || "Event Info"
+      }</h4>`;
+      for (const [key, value] of Object.entries(data)) {
+        if (key !== "label" && value !== undefined && value !== null) {
+          html += `<p style="margin: 4px 0;">${key}: <strong>${value}</strong></p>`;
+        }
+      }
+      html += `</div>`;
+    });
+
+    modalContent.innerHTML = html;
+    modal.style.display = "block";
   });
 }
 function setupTicker() {
@@ -1328,7 +1368,7 @@ function calculateSummary(ohlcData, rtatData) {
 
     ohlcData.forEach((bar) => {
       const d = new Date(bar.time * 1000);
-      const dateKey = d.toISOString().slice(0, 10); 
+      const dateKey = d.toISOString().slice(0, 10);
       const h = d.getUTCHours();
 
       let segmentKey = null;
@@ -1640,6 +1680,14 @@ async function getOHLCVRealTime() {
     renderOHLCVRow(normalizeOHLCVData(rawData));
   }
 }
+function formatAPIDate(dateObj) {
+  const d = new Date(dateObj);
+  return d.toISOString().slice(0, 10);
+}
+function isBetween(dateStr, start, end) {
+  const d = new Date(dateStr);
+  return d >= new Date(start) && d <= new Date(end);
+}
 async function checkDotPlotting(symbol, startDate, endDate, finalData) {
   const dividendChecked = document.getElementById(
     "dividend-dot-plotting"
@@ -1648,6 +1696,7 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
     "earnings-dot-plotting"
   ).checked;
   const insBuyChecked = document.getElementById("insbuy-dot-plotting").checked;
+
   const formattedStart = formatAPIDate(startDate);
   const formattedEnd = formatAPIDate(endDate);
 
@@ -1661,16 +1710,37 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
     )}&from=${formattedStart}&to=${formattedEnd}`;
     const divRes = await fetch(divUrl);
     const divData = await divRes.json();
+
     divData.forEach((item) => {
-      if (item.declarationDate)
+      if (item.declarationDate) {
         plotDotOnChart(
           item.declarationDate,
           "black",
           "Dividend Declaration",
-          finalData
+          finalData,
+          {
+            "Declaration Date": item.declarationDate,
+            "Record Date": item.recordDate,
+            "Payment Date": item.paymentDate,
+            Period: item.period,
+            Value: item.value,
+            UnadjustedValue: item.unadjustedValue,
+          }
         );
-      if (item.paymentDate)
-        plotDotOnChart(item.paymentDate, "gray", "Dividend Payment", finalData);
+      }
+      if (item.paymentDate) {
+        plotDotOnChart(
+          item.paymentDate,
+          "gray",
+          "Dividend Payment",
+          finalData,
+          {
+            "Payment Date": item.paymentDate,
+            Value: item.value,
+            UnadjustedValue: item.unadjustedValue,
+          }
+        );
+      }
     });
   }
 
@@ -1691,7 +1761,13 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
             item.reportDate,
             "blue",
             "Earnings Release",
-            finalData
+            finalData,
+            {
+              "Report Date": item.reportDate,
+              Period: "Quarter",
+              "Eps Actual": item.epsActual,
+              "Eps Estimated": item.epsEstimate,
+            }
           );
         }
       });
@@ -1703,7 +1779,12 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
           item.filingDate &&
           isBetween(item.filingDate, formattedStart, formattedEnd)
         ) {
-          plotDotOnChart(item.filingDate, "purple", "Filing Date", finalData);
+          plotDotOnChart(item.filingDate, "purple", "Filing Date", finalData, {
+            Period: item.period,
+            EarningsEstimateAvg: item.earningsEstimateAvg,
+            EarningsEstimateNumberOfAnalysts:
+              item.earningsEstimateNumberOfAnalysts,
+          });
         }
       });
     }
@@ -1726,7 +1807,15 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
           item.transactionDate,
           "red",
           "Insider Selling",
-          finalData
+          finalData,
+          {
+            "Transaction Date": item.transactionDate,
+            "Transaction Code": "Sell",
+            "Transaction Amount": item.transactionAmount,
+            "Transaction Price": item.transactionPrice,
+            "Owner Name": item.ownerName,
+            "Owner Title": item.ownerTitle,
+          }
         );
       }
       if (
@@ -1738,7 +1827,15 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
           item.transactionDate,
           "green",
           "Insider Buyer",
-          finalData
+          finalData,
+          {
+            "Transaction Date": item.transactionDate,
+            "Transaction Code": "Buy",
+            "Transaction Amount": item.transactionAmount,
+            "Transaction Price": item.transactionPrice,
+            "Owner Name": item.ownerName,
+            "Owner Title": item.ownerCik,
+          }
         );
       }
     });
@@ -1746,11 +1843,7 @@ async function checkDotPlotting(symbol, startDate, endDate, finalData) {
 
   series.setMarkers(dotMarkers);
 }
-function formatAPIDate(dateObj) {
-  const d = new Date(dateObj);
-  return d.toISOString().slice(0, 10);
-}
-function plotDotOnChart(dateStr, color, label, finalData) {
+function plotDotOnChart(dateStr, color, label, finalData, extraData = {}) {
   const eventDate = new Date(dateStr);
   const eventStartSec = Math.floor(
     new Date(
@@ -1760,10 +1853,9 @@ function plotDotOnChart(dateStr, color, label, finalData) {
     ).getTime() / 1000
   );
 
-  const ohlcvBar = finalData.find((bar) => {
-    return bar.time >= eventStartSec && bar.time < eventStartSec + 86400;
-  });
-
+  const ohlcvBar = finalData.find(
+    (bar) => bar.time >= eventStartSec && bar.time < eventStartSec + 86400
+  );
   if (!ohlcvBar) return;
 
   dotMarkers.push({
@@ -1771,10 +1863,11 @@ function plotDotOnChart(dateStr, color, label, finalData) {
     position: "aboveBar",
     color: color,
     shape: "circle",
-    size: 1,
+    size: 2,
+    text: label,
+    data: {
+      label,
+      ...extraData,
+    },
   });
-}
-function isBetween(dateStr, start, end) {
-  const d = new Date(dateStr);
-  return d >= new Date(start) && d <= new Date(end);
 }

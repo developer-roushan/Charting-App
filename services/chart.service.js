@@ -32,15 +32,15 @@ function generateCacheFilename(symbol, fromISO, toISO, interval) {
   const safeSymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
   return `${safeSymbol}_${from}_${to}_${int}.json`;
 }
-function generateCacheFilenameTypes(type, tickers, fromISO, toISO) {
+function generateCacheFilenameTypes(type, symbol, fromISO, toISO) {
   const from = fromISO
     ? `from_${new Date(fromISO).toISOString().split("T")[0]}`
     : "from_na";
   const to = toISO
     ? `to_${new Date(toISO).toISOString().split("T")[0]}`
     : "to_na";
-  const safeTickers = tickers.replace(/[^a-zA-Z0-9.-]/g, "_");
-  return `${type}_${safeTickers}_${from}_${to}.json`;
+  const safesymbol = symbol.replace(/[^a-zA-Z0-9.-]/g, "_");
+  return `${type}_${safesymbol}_${from}_${to}.json`;
 }
 function generateRealtimeCacheFilename(symbol, interval) {
   const date = new Date().toISOString().split("T")[0];
@@ -56,9 +56,7 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   const params = new URLSearchParams({
     api_token: apiKey,
@@ -103,16 +101,13 @@ exports.fetchOHLC = async (fromISO, toISO, symbol, interval) => {
 };
 exports.fetchNews = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
-
-  const filename = generateCacheFilenameTypes("news", tickers, fromISO, toISO);
+  const filename = generateCacheFilenameTypes("news", tickers.join('_'), fromISO, toISO);
   const filePath = path.join(cacheDir, filename);
 
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   const publicationDomains = {
     "Market Watch": ["marketwatch.com"],
@@ -174,15 +169,18 @@ exports.fetchNews = async (tickers, fromISO, toISO) => {
 exports.fetchRTAT = async (tickers, fromISO, toISO) => {
   await ensureCacheDir();
 
-  const filename = generateCacheFilenameTypes("rtat", tickers, fromISO, toISO);
+  const filename = generateCacheFilenameTypes(
+    "rtat",
+    tickers.join("_"),
+    fromISO,
+    toISO
+  );
   const filePath = path.join(cacheDir, filename);
 
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   let allData = {};
 
@@ -253,9 +251,7 @@ exports.changePassword = async (oldPass, newPass) => {
 
     await fs.writeFile(envPath, lines.join("\n") + "\n", "utf-8");
     return true;
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 };
 exports.clearCacheFiles = async () => {
   try {
@@ -265,9 +261,7 @@ exports.clearCacheFiles = async () => {
       success: true,
       message: "Successfully cleared all cached history.",
     };
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 };
 exports.fetchRealtimeData = async (symbol, interval) => {
   await ensureCacheDir();
@@ -277,9 +271,7 @@ exports.fetchRealtimeData = async (symbol, interval) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   const intervalMap = {
     "1min": "1m",
@@ -343,9 +335,7 @@ exports.fetchRealtimeTickData = async (symbol) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   const url = `${baseUrl}real-time/${encodeURIComponent(
     symbol
@@ -366,9 +356,7 @@ exports.fetchDividends = async (symbol, from, to) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
   const url = `${baseUrl}div/${encodeURIComponent(
     symbol
   )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
@@ -387,9 +375,7 @@ exports.fetchEarnings = async (symbol, from, to) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
   const url = `${baseUrl}fundamentals/${encodeURIComponent(
     symbol
   )}?api_token=${apiKey}&from=${from}&to=${to}&fmt=json`;
@@ -413,9 +399,7 @@ exports.fetchInsiderBuy = async (symbol, from, to) => {
   try {
     const cachedData = await fs.readFile(filePath, "utf-8");
     return JSON.parse(cachedData);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  } catch (error) {}
 
   const url = `${baseUrl}fundamentals/${encodeURIComponent(
     symbol

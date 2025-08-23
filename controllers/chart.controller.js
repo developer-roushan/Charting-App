@@ -36,7 +36,7 @@ exports.clearCache = async (req, res) => {
 exports.getNews = async (req, res) => {
   const { tickers, from, to } = req.query;
   try {
-    const news = await chartService.fetchNews(tickers.split(","), from, to);
+    const news = await chartService.fetchNews(tickers.split(','), from, to);
     res.json(news);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -45,7 +45,7 @@ exports.getNews = async (req, res) => {
 exports.getRTAT = async (req, res) => {
   const { tickers, from, to } = req.query;
   try {
-    const averages = await chartService.fetchRTAT(tickers.split(","), from, to);
+    const averages = await chartService.fetchRTAT(tickers.split(','), from, to);
     res.json(averages);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -75,7 +75,7 @@ exports.clearRealtimeCache = async (req, res) => {
 exports.getRTATData = async (req, res) => {
   const { tickers, from, to } = req.query;
   try {
-    const result = await chartService.fetchRTAT(tickers.split(","), from, to);
+    const result = await chartService.fetchRTAT(tickers.split(','), from, to);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
