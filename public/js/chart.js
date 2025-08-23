@@ -182,9 +182,7 @@ function setupChart() {
     matchingMarkers.forEach((marker, idx) => {
       const data = marker.data || {};
       html += `<div style="border-bottom:1px solid #ccc; margin-bottom: 12px; padding-bottom: 8px;">
-      <h4 style ="margin:0;">${
-        data.label || "Event Info"
-      }</h4>`;
+      <h4 style ="margin:0;">${data.label || "Event Info"}</h4>`;
       for (const [key, value] of Object.entries(data)) {
         if (key !== "label" && value !== undefined && value !== null) {
           html += `<p style="margin: 4px 0;">${key}: <strong>${value}</strong></p>`;
@@ -1131,12 +1129,16 @@ function calculateATR(data, period) {
 function generateNews() {
   const newsStartDate = document.getElementById("newsStartDate").value;
   const newsEndDate = document.getElementById("newsEndDate").value;
-  const tickers = [
-    document.getElementById("ticker-code").value,
-    document.getElementById("compare-ticker-code-1").value,
-    document.getElementById("compare-ticker-code-2").value,
-  ].filter(Boolean);
+  const tickers = [document.getElementById("ticker-code").value].filter(
+    Boolean
+  );
 
+  if (document.getElementById("news-ticker2").checked) {
+    tickers.push(document.getElementById("compare-ticker-code-1").value);
+  }
+  if (document.getElementById("news-ticker3").checked) {
+    tickers.push(document.getElementById("compare-ticker-code-2").value);
+  }
   if (tickers.length === 0 || !newsStartDate || !newsEndDate) {
     alert("Please select tickers and dates.");
     return;
